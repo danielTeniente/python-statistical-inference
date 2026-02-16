@@ -1,0 +1,48 @@
+import streamlit as st
+from logic.basic_code import get_numeric_columns
+from logic.normality_page_logic import run_normality_test
+
+def render_normality_test_page():
+    st.title("📊 Normality Tests")
+    
+    if "df" not in st.session_state or st.session_state.df is None:
+        st.warning("⚠️ No data found. Please upload a file in the 'Upload Dataset' section first.")
+        return
+
+    df = st.session_state.df
+    numeric_cols = get_numeric_columns(df)
+    
+    if not numeric_cols:
+        st.error("The dataset does not contain any numeric columns.")
+        return
+
+    # User Selection
+    col1, col2 = st.columns(2)
+    with col1:
+        selected_col = st.selectbox("Select variable", numeric_cols)
+    with col2:
+        test_name = st.selectbox("Select test", ["Shapiro–Wilk", "D’Agostino–Pearson"])
+    
+    if st.button("Run Analysis"):
+        data = df[selected_col].dropna().values
+        
+        # Call Logic
+        stat, p, code = run_normality_test(data, test_name)
+        # Show code
+        st.code(code, language="python")
+        
+        # Display Results
+        st.divider()
+        st.subheader(f"Results for {test_name}")
+        
+        res_c1, res_c2 = st.columns(2)
+        res_c1.metric("Statistic", f"{stat:.4f}")
+        res_c2.metric("p-value", f"{p:.4f}")
+        
+        # Interpretation
+        alpha = 0.05
+        if p < alpha:
+            st.error(f"**Result:** Reject Null Hypothesis ($p < {alpha}$). The data is **not** normally distributed.")
+        else:
+            st.success(f"**Result:** Fail to Reject Null Hypothesis ($p > {alpha}$). The data follows a normal distribution.")
+            
