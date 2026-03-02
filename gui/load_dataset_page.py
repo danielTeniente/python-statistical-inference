@@ -16,6 +16,7 @@ def render_upload_page():
             st.session_state.df = df
             st.success("File uploaded successfully!")
             st.markdown("### Dataset Preview")
+            show_code('df.head()')
             st.dataframe(df.head())
         else:
             st.error("There was an error processing the file.")
