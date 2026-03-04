@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import pandas as pd
 
 # descriptive statistics logic
 def describe_dataset(df):
@@ -77,7 +78,7 @@ def get_histogram(df, column, bins=20, color='skyblue'):
     equivalent Python code as a string.
     """
     # Create the figure
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(15, 5))
     ax.hist(df[column].dropna(), bins=bins, color=color, edgecolor='black')
     ax.set_title(f'Histogram of {column}')
     ax.set_xlabel(column)
@@ -85,7 +86,7 @@ def get_histogram(df, column, bins=20, color='skyblue'):
     
     # Generate the string code for the user
     code = f"import matplotlib.pyplot as plt \n"
-    code += f"plt.figure(figsize=(10, 6))\n"
+    code += f"plt.figure(figsize=(15, 5))\n"
     code += f"plt.hist(df['{column}'].dropna(), bins={bins}, color='{color}', edgecolor='black')\n"
     code += f"plt.title('Histogram of {column}')\n"
     code += f"plt.xlabel('{column}')\n"
@@ -98,14 +99,14 @@ def get_boxplot(df, column):
     Processes the data and returns the figure and the 
     equivalent Python code as a string.
     """
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(15, 5))
     ax.boxplot(df[column].dropna())
     ax.set_title(f'Boxplot of {column}')
     ax.set_xlabel(column)
     ax.set_ylabel('Values')
     
     code = f"import matplotlib.pyplot as plt \n"
-    code += f"plt.figure(figsize=(10, 6))\n"
+    code += f"plt.figure(figsize=(15, 5))\n"
     code += f"plt.boxplot(df['{column}'].dropna())\n"
     code += f"plt.title('Boxplot of {column}')\n"
     code += f"plt.xlabel('{column}')\n"
@@ -114,7 +115,55 @@ def get_boxplot(df, column):
     
     return fig, code
 
+# Categorical variables
 
+def get_barplot(df, column):
+    """
+    Processes the data and returns the figure and the 
+    equivalent Python code as a string.
+    """
+    # 1. Crear la figura y los ejes
+    fig, ax = plt.subplots(figsize=(15, 5))
+    
+    # 2. Generar el gráfico asignándolo al eje (ax)
+    df[column].value_counts().sort_index().plot(
+        kind='bar',
+        color='skyblue',
+        edgecolor='black',
+        ax=ax
+    )
+    
+    # 3. Configurar títulos y etiquetas
+    ax.set_title(f'Bar Plot of {column}')
+    ax.set_xlabel(f'{column}', fontsize=12)
+    ax.set_ylabel('Frequency', fontsize=12)
+    ax.grid(alpha=0.3)
+    
+    # 4. Generar el código en formato string
+    code = "import matplotlib.pyplot as plt\n"
+    code += "fig, ax = plt.subplots(figsize=(15, 5))\n"
+    code += f"df['{column}'].value_counts().sort_index().plot(kind='bar', color='skyblue', edgecolor='black', ax=ax)\n"
+    code += f"ax.set_title('Bar Plot of {column}')\n"
+    code += f"ax.set_xlabel('{column}', fontsize=12)\n"
+    code += "ax.set_ylabel('Frequency', fontsize=12)\n"
+    code += "ax.grid(alpha=0.3)\n"
+    code += "plt.show()"
+    
+    # 5. Retornar ambos elementos
+    return fig, code  
+
+def get_frequency_table(df, column) -> (pd.DataFrame, str):
+    abs_freq = df[column].value_counts().sort_index()
+    rel_freq = df[column].value_counts(normalize=True).sort_index() * 100
+
+    freq_table = pd.DataFrame([abs_freq, rel_freq])
+    freq_table.index = ['Frequency', 'Relative (%)']
+
+    code = f"abs_freq = df['{column}'].value_counts().sort_index()\n"
+    code += f"rel_freq = df['{column}'].value_counts(normalize=True).sort_index() * 100\n"
+    code += f"freq_table = pd.DataFrame([abs_freq, rel_freq])\n"
+    code += f"freq_table.index = ['Frequency', 'Relative (%)']\n"
+    return freq_table, code
 
 
 

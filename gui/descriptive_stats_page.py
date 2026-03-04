@@ -8,13 +8,13 @@ from logic.descriptive_stats_page_logic import (
     get_iqr, get_skewness)
 from gui.components import show_code
 
-def render_descriptive_st_page():
+def render_descriptive_numerical_page():
     if st.session_state.df is None:
         st.warning("⚠️ Please upload a dataset first to see descriptive statistics.")
         return
 
     df = st.session_state.df
-    st.title("📈 Descriptive Analysis")
+    st.title("📈 Descriptive Statistics: Numerical Variables")
     
     # Get numeric columns for both sections
     numeric_cols = get_numeric_columns(df)
@@ -74,28 +74,49 @@ def render_descriptive_st_page():
         show_code(code)
         st.markdown(f"Variance: **{variance}**")
 
+    col1, col2 = st.columns(2)
+    with col1:
+        min_val, code = get_min(df, selected_column)
+        show_code(code)
+        st.markdown(f"Minimum: **{min_val}**")
+    with col2:
+        max_val, code = get_max(df, selected_column)
+        show_code(code)
+        st.markdown(f"Maximum: **{max_val}**")
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        range_val, code = get_range(df, selected_column)
+        show_code(code)
+        st.markdown(f"Range: **{range_val}**")
+    with col2:
+        quartiles, code = get_quartiles(df, selected_column)
+        show_code(code)
+        quartiles = list(quartiles)
+        st.markdown(f"Quartiles: \n- Q1 **{quartiles[0]}**\n- Q2 (Median): **{quartiles[1]}**\n- Q3: **{quartiles[2]}**")
+    with col3:
+        iqr, code = get_iqr(df, selected_column)
+        show_code(code)
+        st.markdown(f"IQR: **{iqr}**")
+
+    skewness, code = get_skewness(df, selected_column)
+    show_code(code)
+    st.markdown(f"Skewness: **{skewness}**")
 
 
-    # --- SECTION ?: DATA VISUALIZATION ---
+    # --- SECTION 3: DATA VISUALIZATION ---
     st.divider()
-    st.subheader("2. DATA VISUALIZATION")
+    st.subheader("3. DATA VISUALIZATION")
     selected_column = st.selectbox("Select column to plot", numeric_cols)
 
     st.markdown("#### Histogram")
     bins_count = st.slider("Number of bins", min_value=5, max_value=50, value=20)
-    if st.button("Generate Histogram"):
-        # Call the logic layer
-        fig, plot_code = get_histogram(df, selected_column, bins=bins_count)
-        show_code(plot_code)
-        # Display the result in the UI
-        st.pyplot(fig)
+    fig, plot_code = get_histogram(df, selected_column, bins=bins_count)
+    show_code(plot_code)
+    st.pyplot(fig)
         
-    #-------------------------------------------    
     st.markdown("#### Boxplot")
-    if st.button("Generate Boxplot"):
-        # Call the logic layer
-        fig, plot_code = get_boxplot(df, selected_column)
-        show_code(plot_code)
-        # Display the result in the UI
-        st.pyplot(fig)
+    fig, plot_code = get_boxplot(df, selected_column)
+    show_code(plot_code)
+    st.pyplot(fig)
         

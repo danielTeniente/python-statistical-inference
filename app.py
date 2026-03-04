@@ -1,28 +1,59 @@
 import streamlit as st
 from gui.load_dataset_page import render_upload_page
 from gui.normality_page import render_normality_test_page
-from gui.descriptive_stats_page import render_descriptive_st_page
+from gui.descriptive_stats_page import render_descriptive_numerical_page
+from gui.descriptive_stats_categorical_page import render_descriptive_categorical_page
 
 # Global Configuration
 st.set_page_config(page_title="Statistics in Python", layout="wide")
 
-# Initialize Session State
+# --- INITIALIZE SESSION STATE ---
 if "df" not in st.session_state:
     st.session_state.df = None
 
+if "current_page" not in st.session_state:
+    st.session_state.current_page = "Upload Dataset"
+
+# Función auxiliar para cambiar de página fácilmente
+def change_page(page_name):
+    st.session_state.current_page = page_name
+
 # --- SIDEBAR NAVIGATION ---
 st.sidebar.title("Navigation")
-selection = st.sidebar.radio(
-    "Go to:",
-    ["Upload Dataset",
-     "Descriptive Statistics", 
-     "Normality Tests"]
-)
+
+# 1. Botón principal
+if st.sidebar.button("Upload Dataset", use_container_width=True):
+    change_page("Upload Dataset")
+
+# 2. Sección con Subsecciones usando un Expander
+with st.sidebar.expander("Descriptive Statistics", expanded=True):
+    # Subsección: Variables Numéricas
+    if st.button("Numerical Variables", use_container_width=True):
+        change_page("Descriptive - Numerical")
+        
+    # Subsección: Variables Categóricas (labels a, b, c)
+    if st.button("Categorical Variables", use_container_width=True):
+        change_page("Descriptive - Categorical")
+
+# 3. Otro botón principal
+if st.sidebar.button("Normality Tests", use_container_width=True):
+    change_page("Normality Tests")
+
 
 # --- PAGE ROUTING ---
-if selection == "Upload Dataset":
+# Leemos la página actual desde el session_state y renderizamos
+page = st.session_state.current_page
+
+if page == "Upload Dataset":
     render_upload_page()
-elif selection == "Descriptive Statistics":
-    render_descriptive_st_page()
-elif selection == "Normality Tests":
+    
+elif page == "Descriptive - Numerical":
+    # Aquí puedes llamar a una función específica, por ejemplo:
+    render_descriptive_numerical_page()
+    
+elif page == "Descriptive - Categorical":
+    # Aquí puedes llamar a una función específica, por ejemplo:
+    render_descriptive_categorical_page()
+    
+elif page == "Normality Tests":
     render_normality_test_page()

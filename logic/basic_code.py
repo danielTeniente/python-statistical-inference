@@ -15,3 +15,7 @@ def load_dataset(uploaded_file):
 def get_numeric_columns(df):
     """Returns a list of column names that contain numeric data."""
     return df.select_dtypes(include=np.number).columns.tolist()
+
+def get_categorical_columns(df):
+    """Returns a list of column names that contain categorical data."""
+    return df.select_dtypes(include=['object', 'category']).columns.tolist()
