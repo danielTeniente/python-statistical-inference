@@ -1,6 +1,7 @@
 import streamlit as st
 from logic.basic_code import get_numeric_columns
-from logic.normality_page_logic import run_normality_test
+from gui.components import show_code
+from logic.normality_page_logic import run_normality_test, get_qqplot
 
 def render_normality_test_page():
     st.title("📊 Normality Tests")
@@ -21,28 +22,32 @@ def render_normality_test_page():
     with col1:
         selected_col = st.selectbox("Select variable", numeric_cols)
     with col2:
-        test_name = st.selectbox("Select test", ["Shapiro–Wilk", "D’Agostino–Pearson"])
+        test_name = st.selectbox("Select test", 
+            ["Shapiro–Wilk", "D’Agostino–Pearson", 
+             "Kolmogorov–Smirnov", "Anderson-Darling"])
     
-    if st.button("Run Analysis"):
-        data = df[selected_col].dropna().values
-        
-        # Call Logic
-        stat, p, code = run_normality_test(data, test_name)
-        # Show code
-        st.code(code, language="python")
-        
-        # Display Results
-        st.divider()
-        st.subheader(f"Results for {test_name}")
-        
-        res_c1, res_c2 = st.columns(2)
-        res_c1.metric("Statistic", f"{stat:.4f}")
-        res_c2.metric("p-value", f"{p:.4f}")
-        
-        # Interpretation
-        alpha = 0.05
-        if p < alpha:
-            st.error(f"**Result:** Reject Null Hypothesis ($p < {alpha}$). The data is **not** normally distributed.")
-        else:
-            st.success(f"**Result:** Fail to Reject Null Hypothesis ($p > {alpha}$). The data follows a normal distribution.")
-            
+    # Call Logic
+    stat, p, code = run_normality_test(df, selected_col, test_name)
+    # Show code
+    show_code(code)    
+    # Display Results
+    st.divider()
+    st.subheader(f"Results for {test_name}")
+    
+    res_c1, res_c2 = st.columns(2)
+    res_c1.metric("Statistic", f"{stat:.4f}")
+    res_c2.metric("p-value", f"{p:.4f}")
+    
+    # Interpretation
+    alpha = 0.05
+    if p < alpha:
+        st.error(f"**Result:** Reject Null Hypothesis ($p < {alpha}$). The data is **not** normally distributed.")
+    else:
+        st.success(f"**Result:** Fail to Reject Null Hypothesis ($p > {alpha}$). Assume the data is normally distributed.")
+
+    # Show QQ-Plot
+    st.divider()
+    st.subheader("QQ-Plot")
+    fig, qq_code = get_qqplot(df, selected_col)
+    show_code(qq_code)
+    st.pyplot(fig)
