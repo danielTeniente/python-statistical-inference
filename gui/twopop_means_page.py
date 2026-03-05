@@ -1,12 +1,11 @@
 import streamlit as st
 from gui.components import show_code
 from logic.basic_code import get_numeric_columns
-from logic.twopop_logic import perform_ftest, perform_levene, plot_confidence_interval
+from logic.twopop_logic import perform_ttest, plot_confidence_interval
 
-def render_twopop_variances_page():
-    st.title("Two population variances tests")
+def render_twopop_means_page():
+    st.title("Two population means tests")
     
-    # 1. Verificación de datos
     if "df" not in st.session_state or st.session_state.df is None:
         st.warning("⚠️ No data found. Please upload a file in the 'Upload Dataset' section first.")
         return
@@ -29,34 +28,27 @@ def render_twopop_variances_page():
         alternative = st.selectbox("Alternative hypothesis", ["two-sided", "less", "greater"], key="alternative")
     with col4:
         confidence = st.slider("Confidence level", 0.80, 0.99, 0.95, 0.01)
+    # equal variances assumption
+    equal_var = st.checkbox("Assume equal variances", value=True, key="equal_var")
 
     st.divider() 
     
-    with st.expander("F-test for equality of variances", expanded=True):
+    with st.expander("T-test for difference in means", expanded=True):
         
-        st.markdown("### F-test to compare variances if both populations are normally distributed")
-        f_stat, p_value, ci, code = perform_ftest(
-            df, selected_col1, selected_col2, alternative, confidence
+        st.markdown("### T-test to compare means if both populations are normally distributed")
+        t_stat, p_value, ci, code = perform_ttest(
+            df, selected_col1, selected_col2, alternative, confidence, equal_var
         )
         show_code(code)
         res1, res2, res3 = st.columns(3)
-        res1.metric("F-statistic", f"{f_stat:.4f}")
+        res1.metric("T-statistic", f"{t_stat:.4f}")
         res2.metric(f"P-value ({alternative})", f"{p_value:.4f}")
         res3.metric("Confidence Interval", f"({ci[0]:.4f}, {ci[1]:.4f})")
         
     with st.expander("Plot of the confidence interval", expanded=False):
         st.markdown("### Plot of the confidence interval for the ratio of variances")
         fig, code_plot = plot_confidence_interval(ci[0], ci[1], 
-            f_stat, title="Confidence Interval for the Variance Ratio", 
-            x_label="Ratio Value (S₁² / S₂²)", y_label="Variance Test")
+            t_stat, title="Confidence Interval for the Difference in Means", 
+            x_label="Difference in Means", y_label="Means Test")
         show_code(code_plot)
         st.pyplot(fig)
-
-    with st.expander("Levene's test for equality of variances", expanded=False):
-        st.markdown("### Levene's test for equal variances if the populations are not normally distributed")
-        stat, p_value_levene, ci, code_levene = perform_levene(df, selected_col1, selected_col2, confidence)
-        show_code(code_levene)
-        res1, res2, res3 = st.columns(3)
-        res1.metric("Levene statistic", f"{stat:.4f}")
-        res2.metric("p-value", f"{p_value_levene:.4f}")
-        res3.metric("Confidence Interval", f"({ci[0]:.4f}, {ci[1]:.4f})")

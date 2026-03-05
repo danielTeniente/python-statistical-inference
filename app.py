@@ -6,6 +6,7 @@ from gui.descriptive_stats_categorical_page import render_descriptive_categorica
 from gui.onepop_mean_page import render_onepop_mean_page
 from gui.onepop_median_page import render_onepop_median_page
 from gui.twopop_variances_page import render_twopop_variances_page
+from gui.twopop_means_page import render_twopop_means_page
 
 # Global Configuration
 st.set_page_config(page_title="Statistics in Python", layout="wide")
@@ -48,8 +49,8 @@ with st.sidebar.expander("One Population tests", expanded=False):
 with st.sidebar.expander("Two Populations tests", expanded=False):
     if st.button("Equality of variances", use_container_width=True):
         change_page("Two Population variances Tests")
-    if st.button("Two Population Medians Test", use_container_width=True):
-        change_page("Two Population Medians Test")
+    if st.button("Difference in means", use_container_width=True):
+        change_page("Two Population Means Tests")
 
 # --- PAGE ROUTING ---
 # Leemos la página actual desde el session_state y renderizamos
@@ -77,3 +78,6 @@ elif page == "One Population Median Test":
 
 elif page == "Two Population variances Tests":
     render_twopop_variances_page()
+
+elif page == "Two Population Means Tests":
+    render_twopop_means_page()
