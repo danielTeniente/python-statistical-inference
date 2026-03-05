@@ -5,6 +5,7 @@ from gui.descriptive_stats_page import render_descriptive_numerical_page
 from gui.descriptive_stats_categorical_page import render_descriptive_categorical_page
 from gui.onepop_mean_page import render_onepop_mean_page
 from gui.onepop_median_page import render_onepop_median_page
+from gui.twopop_variances_page import render_twopop_variances_page
 
 # Global Configuration
 st.set_page_config(page_title="Statistics in Python", layout="wide")
@@ -26,7 +27,7 @@ st.sidebar.title("Navigation")
 if st.sidebar.button("Upload Dataset", use_container_width=True):
     change_page("Upload Dataset")
 
-with st.sidebar.expander("Descriptive Statistics", expanded=True):
+with st.sidebar.expander("Descriptive Statistics", expanded=False):
     # Subsección: Variables Numéricas
     if st.button("Numerical Variables", use_container_width=True):
         change_page("Descriptive - Numerical")
@@ -38,11 +39,17 @@ with st.sidebar.expander("Descriptive Statistics", expanded=True):
 if st.sidebar.button("Normality Tests", use_container_width=True):
     change_page("Normality Tests")
 
-with st.sidebar.expander("One Population tests", expanded=True):
-    if st.button("One Population Mean Test", use_container_width=True):
+with st.sidebar.expander("One Population tests", expanded=False):
+    if st.button("TTest for the mean", use_container_width=True):
         change_page("One Population Mean Test")
-    if st.button("One Population Median Test", use_container_width=True):
+    if st.button("Wilcoxon test for the median", use_container_width=True):
         change_page("One Population Median Test")
+
+with st.sidebar.expander("Two Populations tests", expanded=False):
+    if st.button("Equality of variances", use_container_width=True):
+        change_page("Two Population variances Tests")
+    if st.button("Two Population Medians Test", use_container_width=True):
+        change_page("Two Population Medians Test")
 
 # --- PAGE ROUTING ---
 # Leemos la página actual desde el session_state y renderizamos
@@ -67,3 +74,6 @@ elif page == "One Population Mean Test":
 
 elif page == "One Population Median Test":
     render_onepop_median_page()
+
+elif page == "Two Population variances Tests":
+    render_twopop_variances_page()
