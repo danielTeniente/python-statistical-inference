@@ -71,7 +71,8 @@ def perform_levene(df, col1, col2, confidence=0.95):
 
     return stat, p_value, ci, code
 
-def plot_confidence_interval(low, high, estimated_value, title="Confidence Interval", x_label="", y_label=""):
+def plot_confidence_interval(low, high, estimated_value, title="Confidence Interval", 
+    x_label="", y_label="", H0=0):
     """
     Generates a Forest Plot for a confidence interval (focusing on H0 = 1).
     Returns the figure and the equivalent Python code as a string.
@@ -84,7 +85,7 @@ def plot_confidence_interval(low, high, estimated_value, title="Confidence Inter
     fig, ax = plt.subplots(figsize=(8, 3))
 
     # 3. Draw the Null Hypothesis (H0) line and the error bar
-    ax.axvline(x=1.0, color='red', linestyle='--', linewidth=2, label='H₀ (Equal)')
+    ax.axvline(x=H0, color='red', linestyle='--', linewidth=2, label='H₀ (Equal)')
     
     ax.errorbar(x=estimated_value, y=0,
                 xerr=[[left_dist], [right_dist]], 
@@ -114,7 +115,7 @@ def plot_confidence_interval(low, high, estimated_value, title="Confidence Inter
     code += "left_dist = estimated_value - ci_lower\n"
     code += "right_dist = ci_upper - estimated_value\n\n"
     code += "fig, ax = plt.subplots(figsize=(8, 3))\n"
-    code += "ax.axvline(x=1.0, color='red', linestyle='--', linewidth=2, label='H₀ (Equal)')\n"
+    code += f"ax.axvline(x={H0}, color='red', linestyle='--', linewidth=2, label='H₀ (Equal)')\n"
     code += "ax.errorbar(x=estimated_value, y=0, xerr=[[left_dist], [right_dist]], fmt='o', color='#1f77b4', markersize=10, capsize=8, linewidth=2, label='Estimate (95% CI)')\n"
     code += "ax.set_yticks([0])\n"
     code += f"ax.set_yticklabels('{y_label}', fontsize=12)\n"
@@ -155,3 +156,38 @@ def perform_ttest(df, col1, col2, alternative='two-sided', confidence=0.95, equa
     code += "print(f'Confidence Interval: ({ci.low:.4f}, {ci.high:.4f})')\n"
 
     return t_stat, p_val, ci, code
+
+def perform_mannwhitney(df, col1, col2, alternative='two-sided', confidence=0.95):
+    """Perform Mann-Whitney U test using SciPy's built-in function."""
+    
+    x1, x2 = df[col1], df[col2]
+    res = stats.mannwhitneyu(x1, x2, alternative=alternative)
+    
+    u_stat = res.statistic
+    p_val = res.pvalue
+
+    # ----- Generación de Código -----
+    code = "from scipy.stats import mannwhitneyu\n\n"
+    code += f"x1, x2 = df['{col1}'], df['{col2}']\n"
+    code += f"res = mannwhitneyu(x1, x2, alternative='{alternative}')\n\n"
+    
+    code += "print(f'U-statistic: {res.statistic:.4f}')\n"
+    code += "print(f'p-value: {res.pvalue:.4f}')\n"
+
+    boostrap_data = (np.array(df[col1]), np.array(df[col2]))
+    ci = stats.bootstrap(
+        boostrap_data, 
+        lambda x, y, axis=-1: np.median(x, axis=axis) - np.median(y, axis=axis), 
+        confidence_level=confidence, 
+        n_resamples=2000, 
+        method='percentile'
+    ).confidence_interval
+
+    code += f"\n# Bootstrap confidence interval for the difference of medians\n"
+    code += f"import numpy as np\n"
+    code += f"from scipy.stats import bootstrap\n"
+    code += f"boostrap_data = (np.array(df['{col1}']), np.array(df['{col2}']))\n"
+    code += f"ci = stats.bootstrap(boostrap_data, lambda x, y, axis=-1: np.median(x, axis=axis) - np.median(y, axis=axis), confidence_level={confidence}, n_resamples=2000, method='percentile').confidence_interval\n"
+    code += "print(f'Confidence Interval for the difference of medians: ({ci.low:.4f}, {ci.high:.4f})')\n"
+
+    return u_stat, p_val, ci, code

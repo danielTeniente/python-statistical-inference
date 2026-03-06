@@ -1,12 +1,12 @@
 import streamlit as st
 from gui.components import show_code
 from logic.basic_code import get_numeric_columns
-from logic.twopop_logic import perform_ftest, perform_levene, plot_confidence_interval
+from logic.twopop_logic import perform_mannwhitney, plot_confidence_interval
+from logic.descriptive_stats_page_logic import get_median
 
-def render_twopop_variances_page():
-    st.title("Two population variances tests")
+def render_twopop_medians_page():
+    st.title("Two population medians tests")
     
-    # 1. Verificación de datos
     if "df" not in st.session_state or st.session_state.df is None:
         st.warning("⚠️ No data found. Please upload a file in the 'Upload Dataset' section first.")
         return
@@ -29,34 +29,29 @@ def render_twopop_variances_page():
         alternative = st.selectbox("Alternative hypothesis", ["two-sided", "less", "greater"], key="alternative")
     with col4:
         confidence = st.slider("Confidence level", 0.80, 0.99, 0.95, 0.01)
-
+    # equal variances assumption
     st.divider() 
     
-    with st.expander("F-test for equality of variances", expanded=True):
+    with st.expander("", expanded=True):
         
-        st.markdown("### F-test to compare variances if both populations are normally distributed")
-        f_stat, p_value, ci, code = perform_ftest(
+        st.markdown("### Mann-Whitney U test to compare medians")
+        u_stat, p_value, ci, code = perform_mannwhitney(
             df, selected_col1, selected_col2, alternative, confidence
         )
         show_code(code)
         res1, res2, res3 = st.columns(3)
-        res1.metric("F-statistic", f"{f_stat:.4f}")
+        res1.metric("U-statistic", f"{u_stat:.4f}")
         res2.metric(f"P-value ({alternative})", f"{p_value:.4f}")
         res3.metric("Confidence Interval", f"({ci[0]:.4f}, {ci[1]:.4f})")
         
     with st.expander("Plot of the confidence interval", expanded=False):
         st.markdown("### Plot of the confidence interval for the ratio of variances")
+        dataset_median1,_ = get_median(df,selected_col1)
+        dataset_median2,_ = get_median(df,selected_col2)
+        dataset_diff = dataset_median1 - dataset_median2
+
         fig, code_plot = plot_confidence_interval(ci[0], ci[1], 
-            f_stat, title="Confidence Interval for the Variance Ratio", 
-            x_label="Ratio Value (S₁² / S₂²)", y_label="Variance Test", H0=1)
+            dataset_diff, title="Confidence Interval for the Difference in Medians", 
+            x_label="Difference in Medians", y_label="Medians Test")
         show_code(code_plot)
         st.pyplot(fig)
-
-    with st.expander("Levene's test for equality of variances", expanded=False):
-        st.markdown("### Levene's test for equal variances if the populations are not normally distributed")
-        stat, p_value_levene, ci, code_levene = perform_levene(df, selected_col1, selected_col2, confidence)
-        show_code(code_levene)
-        res1, res2, res3 = st.columns(3)
-        res1.metric("Levene statistic", f"{stat:.4f}")
-        res2.metric("p-value", f"{p_value_levene:.4f}")
-        res3.metric("Confidence Interval", f"({ci[0]:.4f}, {ci[1]:.4f})")
