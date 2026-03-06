@@ -8,6 +8,9 @@ from gui.onepop_median_page import render_onepop_median_page
 from gui.twopop_variances_page import render_twopop_variances_page
 from gui.twopop_means_page import render_twopop_means_page
 from gui.twopop_median_page import render_twopop_medians_page
+from gui.kpop_variances_page import render_kpop_variances_page
+from gui.kpop_means_page import render_kpop_means_page
+from gui.kpop_medians_page import render_kpop_medians_page
 
 # Global Configuration
 st.set_page_config(page_title="Statistics in Python", layout="wide")
@@ -41,19 +44,27 @@ with st.sidebar.expander("Descriptive Statistics", expanded=False):
 if st.sidebar.button("Normality Tests", use_container_width=True):
     change_page("Normality Tests")
 
-with st.sidebar.expander("One Population tests", expanded=False):
-    if st.button("TTest for the mean", use_container_width=True):
-        change_page("One Population Mean Test")
-    if st.button("Wilcoxon test for the median", use_container_width=True):
-        change_page("One Population Median Test")
+with st.sidebar.expander("One-Sample Tests", expanded=False):
+    if st.button("One-Sample Mean Test", use_container_width=True):
+        change_page("One-Sample Mean Test")
+    if st.button("One-Sample Median Test", use_container_width=True):
+        change_page("One-Sample Median Test")
 
-with st.sidebar.expander("Two Populations tests", expanded=False):
-    if st.button("Equality of variances", use_container_width=True):
-        change_page("Two Population variances Tests")
-    if st.button("Difference in means", use_container_width=True):
-        change_page("Two Population Means Tests")
-    if st.button("Difference in medians", use_container_width=True):
-        change_page("Two Population Medians Tests")
+with st.sidebar.expander("Two-Sample Tests", expanded=False):
+    if st.button("Two-Sample Variance Tests", use_container_width=True):
+        change_page("Two-Sample Variance Tests")
+    if st.button("Two-Sample Mean Tests", use_container_width=True):
+        change_page("Two-Sample Mean Tests")
+    if st.button("Two-Sample Median Tests", use_container_width=True):
+        change_page("Two-Sample Median Tests")
+
+with st.sidebar.expander("k-Sample Tests", expanded=False):
+    if st.button("k-Sample Variance Tests", use_container_width=True):
+        change_page("k-Sample Variance Tests")
+    if st.button("k-Sample Mean Tests", use_container_width=True):
+        change_page("k-Sample Mean Tests")
+    if st.button("k-Sample Median Tests", use_container_width=True):
+        change_page("k-Sample Median Tests")
 
 # --- PAGE ROUTING ---
 # Leemos la página actual desde el session_state y renderizamos
@@ -63,27 +74,34 @@ if page == "Upload Dataset":
     render_upload_page()
     
 elif page == "Descriptive - Numerical":
-    # Aquí puedes llamar a una función específica, por ejemplo:
     render_descriptive_numerical_page()
     
 elif page == "Descriptive - Categorical":
-    # Aquí puedes llamar a una función específica, por ejemplo:
     render_descriptive_categorical_page()
     
 elif page == "Normality Tests":
     render_normality_test_page()
 
-elif page == "One Population Mean Test":
+elif page == "One-Sample Mean Test":
     render_onepop_mean_page()
 
-elif page == "One Population Median Test":
+elif page == "One-Sample Median Test":
     render_onepop_median_page()
 
-elif page == "Two Population variances Tests":
+elif page == "Two-Sample Variance Tests":
     render_twopop_variances_page()
 
-elif page == "Two Population Means Tests":
+elif page == "Two-Sample Mean Tests":
     render_twopop_means_page()
 
-elif page == "Two Population Medians Tests":
+elif page == "Two-Sample Median Tests":
     render_twopop_medians_page()
+
+elif page == "k-Sample Variance Tests":
+    render_kpop_variances_page()
+
+elif page == "k-Sample Mean Tests":
+    render_kpop_means_page()
+
+elif page == "k-Sample Median Tests":
+    render_kpop_medians_page()
