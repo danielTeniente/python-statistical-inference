@@ -29,7 +29,6 @@ def render_twopop_variances_page():
         st.info("Please review your dataset or use a different test.")
         return
 
-    st.markdown("### Test Setup")
     col1, col2 = st.columns(2)
     with col1:
         # Select the numeric variable to test

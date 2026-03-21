@@ -168,23 +168,31 @@ def plot_confidence_interval(low, high, estimated_value, title="Confidence Inter
     # 6. Return both elements
     return fig, code
 
-def perform_ttest(df, col1, col2, alternative='two-sided', confidence=0.95, equal_var=True):
-    """Perform T-test using SciPy's built-in function."""
+def perform_ttest(df, num_col, cat_col, alternative='two-sided', confidence=0.95, equal_var=True):
+    """Perform T-test using SciPy's built-in function, grouped by a categorical column."""
     
-    x1, x2 = df[col1], df[col2]
+    # 1. Extract categories and filter data
+    categories = df[cat_col].dropna().unique()
+    group1, group2 = categories[0], categories[1]
+    
+    x1 = df[df[cat_col] == group1][num_col].dropna()
+    x2 = df[df[cat_col] == group2][num_col].dropna()
+    
+    # 2. Perform test
     res = stats.ttest_ind(x1, x2, equal_var=equal_var, alternative=alternative)
     
     t_stat = res.statistic
     p_val = res.pvalue
     
-    # Extraemos el intervalo de confianza (requiere SciPy 1.10.0 o superior)
     ci_obj = res.confidence_interval(confidence_level=confidence)
     ci = (ci_obj.low, ci_obj.high)
 
-    # ----- Generación de Código -----
-    code = "from scipy.stats import ttest_ind\n\n"
-    code += f"x1, x2 = df['{col1}'], df['{col2}']\n"
-    code += f"res = ttest_ind(x1, x2, equal_var={equal_var}, alternative='{alternative}')\n\n"
+    code = "from scipy import stats\n\n"
+    code += f"# Filter data by categories '{group1}' and '{group2}'\n"
+    code += f"x1 = df[df['{cat_col}'] == '{group1}']['{num_col}'].dropna()\n"
+    code += f"x2 = df[df['{cat_col}'] == '{group2}']['{num_col}'].dropna()\n\n"
+    
+    code += f"res = stats.ttest_ind(x1, x2, equal_var={equal_var}, alternative='{alternative}')\n\n"
     
     code += "print(f'T-statistic: {res.statistic:.4f}')\n"
     code += "print(f'p-value: {res.pvalue:.4f}')\n\n"
@@ -195,37 +203,76 @@ def perform_ttest(df, col1, col2, alternative='two-sided', confidence=0.95, equa
 
     return t_stat, p_val, ci, code
 
-def perform_mannwhitney(df, col1, col2, alternative='two-sided', confidence=0.95):
-    """Perform Mann-Whitney U test using SciPy's built-in function."""
+
+def perform_mannwhitney(df, num_col, cat_col, alternative='two-sided', confidence=0.95):
+    """Perform Mann-Whitney U test using SciPy's built-in function, grouped by a categorical column."""
     
-    x1, x2 = df[col1], df[col2]
+    # 1. Extract categories and filter data
+    categories = df[cat_col].dropna().unique()
+        
+    group1, group2 = categories[0], categories[1]
+    
+    x1 = df[df[cat_col] == group1][num_col].dropna()
+    x2 = df[df[cat_col] == group2][num_col].dropna()
+    
     res = stats.mannwhitneyu(x1, x2, alternative=alternative)
     
     u_stat = res.statistic
     p_val = res.pvalue
 
-    # ----- Generación de Código -----
-    code = "from scipy.stats import mannwhitneyu\n\n"
-    code += f"x1, x2 = df['{col1}'], df['{col2}']\n"
-    code += f"res = mannwhitneyu(x1, x2, alternative='{alternative}')\n\n"
-    
-    code += "print(f'U-statistic: {res.statistic:.4f}')\n"
-    code += "print(f'p-value: {res.pvalue:.4f}')\n"
-
-    boostrap_data = (np.array(df[col1]), np.array(df[col2]))
-    ci = stats.bootstrap(
+    boostrap_data = (np.array(x1), np.array(x2))
+    ci_obj = stats.bootstrap(
         boostrap_data, 
         lambda x, y, axis=-1: np.median(x, axis=axis) - np.median(y, axis=axis), 
         confidence_level=confidence, 
         n_resamples=2000, 
         method='percentile'
     ).confidence_interval
+    
+    # Convert to standard tuple for the UI
+    ci = (ci_obj.low, ci_obj.high)
 
-    code += f"\n# Bootstrap confidence interval for the difference of medians\n"
-    code += f"import numpy as np\n"
-    code += f"from scipy.stats import bootstrap\n"
-    code += f"boostrap_data = (np.array(df['{col1}']), np.array(df['{col2}']))\n"
-    code += f"ci = stats.bootstrap(boostrap_data, lambda x, y, axis=-1: np.median(x, axis=axis) - np.median(y, axis=axis), confidence_level={confidence}, n_resamples=2000, method='percentile').confidence_interval\n"
-    code += "print(f'Confidence Interval for the difference of medians: ({ci.low:.4f}, {ci.high:.4f})')\n"
+    code = "import numpy as np\n"
+    code += "from scipy import stats\n\n"
+    
+    code += f"# Filter data by categories '{group1}' and '{group2}'\n"
+    code += f"x1 = df[df['{cat_col}'] == '{group1}']['{num_col}'].dropna()\n"
+    code += f"x2 = df[df['{cat_col}'] == '{group2}']['{num_col}'].dropna()\n\n"
+    
+    code += f"res = stats.mannwhitneyu(x1, x2, alternative='{alternative}')\n\n"
+    
+    code += "print(f'U-statistic: {res.statistic:.4f}')\n"
+    code += "print(f'p-value: {res.pvalue:.4f}')\n\n"
+    
+    code += f"# Bootstrap confidence interval for the difference of medians\n"
+    code += f"boostrap_data = (np.array(x1), np.array(x2))\n"
+    code += f"ci_obj = stats.bootstrap(\n"
+    code += f"    boostrap_data, \n"
+    code += f"    lambda x, y, axis=-1: np.median(x, axis=axis) - np.median(y, axis=axis), \n"
+    code += f"    confidence_level={confidence}, \n"
+    code += f"    n_resamples=2000, \n"
+    code += f"    method='percentile'\n"
+    code += f").confidence_interval\n"
+    code += "print(f'Confidence Interval for the difference of medians: ({ci_obj.low:.4f}, {ci_obj.high:.4f})')\n"
 
     return u_stat, p_val, ci, code
+
+def get_sample_difference_in_means(df, num_col, cat_col):
+    """Calculate the difference in means between two groups defined by a categorical column."""
+    categories = df[cat_col].dropna().unique()
+    group1, group2 = categories[0], categories[1]
+    
+    mean1 = df[df[cat_col] == group1][num_col].dropna().mean()
+    mean2 = df[df[cat_col] == group2][num_col].dropna().mean()
+    
+    return mean1 - mean2
+
+def get_sample_difference_in_medians(df, num_col, cat_col):
+    """Calculate the difference in medians between two groups defined by a categorical column."""
+    categories = df[cat_col].dropna().unique()
+    group1, group2 = categories[0], categories[1]
+    
+    median1 = df[df[cat_col] == group1][num_col].dropna().median()
+    median2 = df[df[cat_col] == group2][num_col].dropna().median()
+    
+    return median1 - median2
