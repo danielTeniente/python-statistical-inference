@@ -4,10 +4,20 @@ from scipy import stats
 import matplotlib.pyplot as plt
 
 
-def perform_ftest(df, col1, col2, alternative='two-sided', confidence=0.95):
-    """Perform F-test to compare variances of two independent samples."""
-    f_stat = np.var(df[col1], ddof=1) / np.var(df[col2], ddof=1)
-    ddof1, ddof2 = len(df[col1])-1, len(df[col2])-1
+def perform_ftest(df, num_col, cat_col, alternative='two-sided', confidence=0.95):
+    """
+    Perform F-test to compare variances of two independent samples 
+    grouped by a categorical column.
+    """
+    categories = df[cat_col].dropna().unique()
+    
+    group1_name, group2_name = categories[0], categories[1]
+    
+    data1 = df[df[cat_col] == group1_name][num_col].dropna()
+    data2 = df[df[cat_col] == group2_name][num_col].dropna()
+
+    f_stat = np.var(data1, ddof=1) / np.var(data2, ddof=1)
+    ddof1, ddof2 = len(data1) - 1, len(data2) - 1
 
     p_two = 2 * min(f.cdf(f_stat, ddof1, ddof2), 1 - f.cdf(f_stat, ddof1, ddof2))
     p_less = f.cdf(f_stat, ddof1, ddof2)
@@ -19,42 +29,64 @@ def perform_ftest(df, col1, col2, alternative='two-sided', confidence=0.95):
         "greater": p_greater
     }
 
-    code = "from scipy.stats import f\n"
-    code += f"f_stat = np.var(df['{col1}'], ddof=1) / np.var(df['{col2}'], ddof=1)\n"
-    code += f"ddof1, ddof2 = len(df['{col1}'])-1, len(df['{col2}'])-1\n"
+    alpha = 1 - confidence
+    lower_bound = f_stat / f.ppf(1 - alpha/2, ddof1, ddof2)
+    upper_bound = f_stat / f.ppf(alpha/2, ddof1, ddof2)
+    ci = (lower_bound, upper_bound)
+
+    code = "import numpy as np\n"
+    code += "from scipy.stats import f\n\n"
+    
+    code += f"# Filter data by categories '{group1_name}' and '{group2_name}'\n"
+    code += f"data1 = df[df['{cat_col}'] == '{group1_name}']['{num_col}'].dropna()\n"
+    code += f"data2 = df[df['{cat_col}'] == '{group2_name}']['{num_col}'].dropna()\n\n"
+    
+    code += "f_stat = np.var(data1, ddof=1) / np.var(data2, ddof=1)\n"
+    code += "ddof1, ddof2 = len(data1)-1, len(data2)-1\n\n"
+    
     if alternative == "two-sided":
         code += "p_value = 2 * min(f.cdf(f_stat, ddof1, ddof2), 1 - f.cdf(f_stat, ddof1, ddof2))\n"
-    if alternative == "less":
+    elif alternative == "less":
         code += "p_value = f.cdf(f_stat, ddof1, ddof2)\n"
-    if alternative == "greater":
+    elif alternative == "greater":
         code += "p_value = 1 - f.cdf(f_stat, ddof1, ddof2)\n"
 
     code += "print(f'F-statistic: {f_stat:.4f}')\n"
     code += "print(f'p-value: {p_value:.4f}')\n"
 
-    # Confidence interval
-    alpha = 1 - confidence
-    lower_bound = f_stat / f.ppf(1 - alpha/2, ddof1, ddof2)
-    upper_bound = f_stat / f.ppf(alpha/2, ddof1, ddof2)
-    ci = (lower_bound, upper_bound)
     code += f"\n# Confidence interval for the ratio of variances\n"
     code += f"alpha = 1 - {confidence}\n"
-    code += f"lower_bound = f_stat / f.ppf(1 - alpha/2, ddof1, ddof2)\n"
-    code += f"upper_bound = f_stat / f.ppf(alpha/2, ddof1, ddof2)\n"
+    code += "lower_bound = f_stat / f.ppf(1 - alpha/2, ddof1, ddof2)\n"
+    code += "upper_bound = f_stat / f.ppf(alpha/2, ddof1, ddof2)\n"
     code += "print(f'Confidence Interval for the ratio of variances: ({lower_bound:.4f}, {upper_bound:.4f})')\n"
 
     return f_stat, p_values[alternative], ci, code
 
-def perform_levene(df, col1, col2, confidence=0.95):
-    "Perform Levene's test for equal variances."
-    stat, p_value = stats.levene(df[col1], df[col2], center='median')
-    code = "from scipy import stats\n"
-    code += f"stat, p_value = stats.levene(df['{col1}'], df['{col2}'], center='median')\n"
+def perform_levene(df, num_col, cat_col, confidence=0.95):
+    """Perform Levene's test for equal variances using a numeric and a categorical column."""
+    
+    categories = df[cat_col].dropna().unique()
+    group1_name, group2_name = categories[0], categories[1]
+    
+    data1 = df[df[cat_col] == group1_name][num_col].dropna()
+    data2 = df[df[cat_col] == group2_name][num_col].dropna()
+
+    stat, p_value = stats.levene(data1, data2, center='median')
+    
+    code = "import numpy as np\n"
+    code += "from scipy import stats\n\n"
+    
+    code += f"# Filter data by categories '{group1_name}' and '{group2_name}'\n"
+    code += f"data1 = df[df['{cat_col}'] == '{group1_name}']['{num_col}'].dropna()\n"
+    code += f"data2 = df[df['{cat_col}'] == '{group2_name}']['{num_col}'].dropna()\n\n"
+    
+    code += "stat, p_value = stats.levene(data1, data2, center='median')\n"
     code += "print(f'Levene statistic: {stat:.4f}')\n"
     code += "print(f'p-value: {p_value:.4f}')\n"
 
-    # robust confidence interval for the ratio of variances using bootstrap
-    boostrap_data = (np.array(df[col1]), np.array(df[col2]))
+    # 5. Robust confidence interval for the ratio of variances using bootstrap
+    boostrap_data = (np.array(data1), np.array(data2))
+    
     ci = stats.bootstrap(
         boostrap_data, 
         lambda x, y, axis=-1: np.var(x, ddof=1, axis=axis) / np.var(y, ddof=1, axis=axis), 
@@ -62,14 +94,20 @@ def perform_levene(df, col1, col2, confidence=0.95):
         n_resamples=2000, 
         method='percentile'
     ).confidence_interval
+    ci_tuple = (ci.low, ci.high)
     
     code += f"\n# Bootstrap confidence interval for the ratio of variances\n"
-    code += f"import numpy as np\n"
-    code += f"boostrap_data = (np.array(df['{col1}']), np.array(df['{col2}']))\n"
-    code += f"ci = stats.bootstrap(boostrap_data, lambda x, y, axis=-1: np.var(x, ddof=1, axis=axis) / np.var(y, ddof=1, axis=axis), confidence_level={confidence}, n_resamples=2000, method='percentile').confidence_interval\n"
+    code += f"boostrap_data = (np.array(data1), np.array(data2))\n"
+    code += f"ci = stats.bootstrap(\n"
+    code += f"    boostrap_data, \n"
+    code += f"    lambda x, y, axis=-1: np.var(x, ddof=1, axis=axis) / np.var(y, ddof=1, axis=axis), \n"
+    code += f"    confidence_level={confidence}, \n"
+    code += f"    n_resamples=2000, \n"
+    code += f"    method='percentile'\n"
+    code += f").confidence_interval\n"
     code += "print(f'Confidence Interval for the ratio of variances: ({ci.low:.4f}, {ci.high:.4f})')\n"
 
-    return stat, p_value, ci, code
+    return stat, p_value, ci_tuple, code
 
 def plot_confidence_interval(low, high, estimated_value, title="Confidence Interval", 
     x_label="", y_label="", H0=0):
