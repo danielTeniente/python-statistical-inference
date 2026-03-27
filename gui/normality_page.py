@@ -38,13 +38,6 @@ def render_normality_test_page():
     res_c1.metric("Statistic", f"{stat:.4f}")
     res_c2.metric("p-value", f"{p:.4f}")
     
-    # Interpretation
-    alpha = 0.05
-    if p < alpha:
-        st.error(f"**Result:** Reject Null Hypothesis ($p < {alpha}$). The data is **not** normally distributed.")
-    else:
-        st.success(f"**Result:** Fail to Reject Null Hypothesis ($p > {alpha}$). Assume the data is normally distributed.")
-
     # Show QQ-Plot
     st.divider()
     st.subheader("QQ-Plot")

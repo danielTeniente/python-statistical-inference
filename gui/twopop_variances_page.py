@@ -31,10 +31,8 @@ def render_twopop_variances_page():
 
     col1, col2 = st.columns(2)
     with col1:
-        # Select the numeric variable to test
         selected_num_col = st.selectbox("Select numerical variable to analyze", numeric_cols, key="num_col")
     with col2:
-        # Select the categorical variable to group by
         selected_cat_col = st.selectbox("Select grouping variable (2 populations)", valid_categorical_cols, key="cat_col")
     
     groups = df[selected_cat_col].dropna().unique()

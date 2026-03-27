@@ -1,6 +1,7 @@
 import streamlit as st
 from gui.load_dataset_page import render_upload_page
 from gui.normality_page import render_normality_test_page
+from gui.normality_by_group_page import render_normality_test_by_group_page
 from gui.descriptive_stats_page import render_descriptive_numerical_page
 from gui.descriptive_stats_categorical_page import render_descriptive_categorical_page
 from gui.onepop_mean_page import render_onepop_mean_page
@@ -41,8 +42,11 @@ with st.sidebar.expander("Descriptive Statistics", expanded=False):
     if st.button("Categorical Variables", use_container_width=True):
         change_page("Descriptive - Categorical")
 
-if st.sidebar.button("Normality Tests", use_container_width=True):
-    change_page("Normality Tests")
+with st.sidebar.expander("Normality Tests", expanded=False):
+    if st.button("Whole Sample Normality", use_container_width=True):
+        change_page("Whole Sample Normality")
+    if st.button("Normality Tests by Group", use_container_width=True):
+        change_page("Normality Tests by Group")
 
 with st.sidebar.expander("One-Sample Tests", expanded=False):
     if st.button("One-Sample Mean Test", use_container_width=True):
@@ -79,8 +83,11 @@ elif page == "Descriptive - Numerical":
 elif page == "Descriptive - Categorical":
     render_descriptive_categorical_page()
     
-elif page == "Normality Tests":
+elif page == "Whole Sample Normality":
     render_normality_test_page()
+
+elif page == "Normality Tests by Group":
+    render_normality_test_by_group_page()    
 
 elif page == "One-Sample Mean Test":
     render_onepop_mean_page()
