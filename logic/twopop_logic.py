@@ -265,7 +265,11 @@ def get_sample_difference_in_means(df, num_col, cat_col):
     mean1 = df[df[cat_col] == group1][num_col].dropna().mean()
     mean2 = df[df[cat_col] == group2][num_col].dropna().mean()
     
-    return mean1 - mean2
+    code = f"mean1 = df[df['{cat_col}'] == '{group1}']['{num_col}'].dropna().mean()\n"
+    code += f"mean2 = df[df['{cat_col}'] == '{group2}']['{num_col}'].dropna().mean()\n"
+    code += f"difference = mean1 - mean2\n"
+
+    return mean1 - mean2, code
 
 def get_sample_difference_in_medians(df, num_col, cat_col):
     """Calculate the difference in medians between two groups defined by a categorical column."""
@@ -274,5 +278,9 @@ def get_sample_difference_in_medians(df, num_col, cat_col):
     
     median1 = df[df[cat_col] == group1][num_col].dropna().median()
     median2 = df[df[cat_col] == group2][num_col].dropna().median()
+
+    code = f"median1 = df[df['{cat_col}'] == '{group1}']['{num_col}'].dropna().median()\n"
+    code += f"median2 = df[df['{cat_col}'] == '{group2}']['{num_col}'].dropna().median()\n"
+    code += f"difference = median1 - median2\n"
     
-    return median1 - median2
+    return median1 - median2, code

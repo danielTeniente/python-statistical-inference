@@ -54,8 +54,10 @@ def render_twopop_medians_page():
         
     with st.expander("Plot of the confidence interval", expanded=False):
         st.markdown("### Plot of the confidence interval for the ratio of variances")
-        dataset_diff = get_sample_difference_in_medians(df, selected_num_col, selected_cat_col)
-
+        st.markdown('**Get the sample difference in medians**')
+        dataset_diff, code_diff = get_sample_difference_in_medians(df, selected_num_col, selected_cat_col)
+        st.markdown(f'{dataset_diff:.4f}')
+        show_code(code_diff)
         fig, code_plot = plot_confidence_interval(ci[0], ci[1], 
             dataset_diff, title="Confidence Interval for the Difference in Medians", 
             x_label="Difference in Medians", y_label="Medians Test")

@@ -12,6 +12,10 @@ from gui.twopop_median_page import render_twopop_medians_page
 from gui.kpop_variances_page import render_kpop_variances_page
 from gui.kpop_means_page import render_kpop_means_page
 from gui.kpop_medians_page import render_kpop_medians_page
+from gui.ovr_normality_page import render_ovr_normality_test_page
+from gui.ovr_variances_page import render_ovr_variances_page
+from gui.ovr_mean_page import render_ovr_means_page
+from gui.ovr_median_page import render_ovr_medians_page
 
 # Global Configuration
 st.set_page_config(page_title="Statistics in Python", layout="wide")
@@ -70,6 +74,16 @@ with st.sidebar.expander("k-Sample Tests", expanded=False):
     if st.button("k-Sample Median Tests", use_container_width=True):
         change_page("k-Sample Median Tests")
 
+with st.sidebar.expander("One-vs-Rest Tests", expanded=False):
+    if st.button("One-vs-Rest Normality Tests", use_container_width=True):
+        change_page("One-vs-Rest Normality Tests")
+    if st.button("One-vs-Rest Variance Tests", use_container_width=True):
+        change_page("One-vs-Rest Variance Tests")
+    if st.button("One-vs-Rest Mean Tests", use_container_width=True):
+        change_page("One-vs-Rest Mean Tests")
+    if st.button("One-vs-Rest Median Tests", use_container_width=True):
+        change_page("One-vs-Rest Median Tests")
+
 # --- PAGE ROUTING ---
 # Leemos la página actual desde el session_state y renderizamos
 page = st.session_state.current_page
@@ -112,3 +126,15 @@ elif page == "k-Sample Mean Tests":
 
 elif page == "k-Sample Median Tests":
     render_kpop_medians_page()
+
+elif page == "One-vs-Rest Normality Tests":
+    render_ovr_normality_test_page()
+
+elif page == "One-vs-Rest Variance Tests":
+    render_ovr_variances_page()
+
+elif page == "One-vs-Rest Mean Tests":
+    render_ovr_means_page()
+
+elif page == "One-vs-Rest Median Tests":
+    render_ovr_medians_page()

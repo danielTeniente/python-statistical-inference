@@ -42,22 +42,23 @@ def render_twopop_means_page():
     equal_var = st.checkbox("Assume equal variances", value=True, key="equal_var")
 
     st.divider() 
-    
-    with st.expander("T-test for difference in means", expanded=True):
         
-        st.markdown("### T-test to compare means if both populations are normally distributed")
-        t_stat, p_value, ci, code = perform_ttest(
-            df, selected_num_col, selected_cat_col, alternative, confidence, equal_var
-        )
-        show_code(code)
-        res1, res2, res3 = st.columns(3)
-        res1.metric("T-statistic", f"{t_stat:.4f}")
-        res2.metric(f"P-value ({alternative})", f"{p_value:.4f}")
-        res3.metric("Confidence Interval", f"({ci[0]:.4f}, {ci[1]:.4f})")
+    st.markdown("### T-test to compare means")
+    t_stat, p_value, ci, code = perform_ttest(
+        df, selected_num_col, selected_cat_col, alternative, confidence, equal_var
+    )
+    show_code(code)
+    res1, res2, res3 = st.columns(3)
+    res1.metric("T-statistic", f"{t_stat:.4f}")
+    res2.metric(f"P-value ({alternative})", f"{p_value:.4f}")
+    res3.metric("Confidence Interval", f"({ci[0]:.4f}, {ci[1]:.4f})")
         
     with st.expander("Plot of the confidence interval", expanded=False):
-        sample_diff = get_sample_difference_in_means(df, selected_num_col, selected_cat_col)
         st.markdown("### Plot of the confidence interval for the difference in means")
+        st.markdown('**Get the sample difference in means**')
+        sample_diff, code_diff = get_sample_difference_in_means(df, selected_num_col, selected_cat_col)
+        st.markdown(f'{sample_diff:.4f}')
+        show_code(code_diff)
         fig, code_plot = plot_confidence_interval(ci[0], ci[1], 
             sample_diff, title="Confidence Interval for the Difference in Means", 
             x_label="Difference in Means", y_label="Means Test")
