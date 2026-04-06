@@ -1,6 +1,7 @@
 import pandas as pd
-from scipy.stats import binomtest, fisher_exact
-from statsmodels.stats.proportion import proportions_ztest, proportion_confint
+import numpy as np
+from scipy.stats import binomtest
+from statsmodels.stats.proportion import proportions_ztest, proportion_confint, confint_proportions_2indep
 
 ################
 # One proportion tests and confidence intervals
@@ -87,105 +88,160 @@ def perform_one_proportion_ztest(df, selected_column, p0=0.5, alternative='two-s
     code += "\nprint(f'P-value: {p_value:.4f}')"
     return statistic, p_value, code
 
-def get_clopper_pearson_interval(df, selected_column, confidence=0.95, success_term=None):
+def get_one_proportion_interval(df, selected_column, method='wilson', confidence=0.95, success_term=None):
     """
-    Calculate the Clopper-Pearson confidence interval for a proportion.
+    Calculate the confidence interval for a proportion using a specified method.
 
     Parameters:
     - df: DataFrame containing the data.
     - selected_column: Column name for the binary outcome variable.
+    - method: The method to use ('beta' for Clopper-Pearson, 'wilson', 'normal', etc.).
     - confidence: Confidence level for the interval (default is 0.95).
+    - success_term: The value in the column representing a 'success'. If None, sums the column.
 
     Returns:
-    - Tuple containing the lower and upper bounds of the confidence interval.
+    - Tuple: (lower_bound, upper_bound).
+    - String: Python code to reproduce the calculation.
     """
-    if success_term is not None:
-        successes = (df[selected_column] == success_term).sum()
-    else:        
-        successes = df[selected_column].sum()
-
-    trials = len(df)
-    lower, upper = proportion_confint(successes, trials, alpha=1-confidence, method='beta')
-
-    code = f"from statsmodels.stats.proportion import proportion_confint"
-    if success_term is not None:
-        term_str = f"'{success_term}'" if isinstance(success_term, str) else str(success_term)
-        code += f"\nsuccesses = (df['{selected_column}'] == {term_str}).sum()"
-    else:
-        code += f"\nsuccesses = df['{selected_column}'].sum()"
-    code += f"\ntrials = len(df)"
-    code += f"\nlower, upper = proportion_confint(successes, trials, alpha=1-{confidence}, method='beta')"
-    code += "\nprint(f'Clopper-Pearson Confidence Interval: ({lower:.4f}, {upper:.4f})')"
-    return (lower, upper), code
-
-def get_wilson_interval(df, selected_column, confidence=0.95, success_term=None):
-    """
-    Calculate the Wilson confidence interval for a proportion.
-
-    Parameters:
-    - df: DataFrame containing the data.
-    - selected_column: Column name for the binary outcome variable.
-    - confidence: Confidence level for the interval (default is 0.95).
-
-    Returns:
-    - Tuple containing the lower and upper bounds of the confidence interval.
-    """
-    if success_term is not None:
-        successes = (df[selected_column] == success_term).sum()
-    else:        
-        successes = df[selected_column].sum()
-    trials = len(df)
-    lower, upper = proportion_confint(successes, trials, alpha=1-confidence, method='wilson')
     
-    code = f"from statsmodels.stats.proportion import proportion_confint"
+    # 1. Mapeo de nombres para que el 'print' del código generado se vea profesional
+    method_names = {
+        'beta': 'Clopper-Pearson',
+        'wilson': 'Wilson',
+        'normal': 'Wald (Normal)',
+        'agresti_coull': 'Agresti-Coull',
+        'jeffreys': 'Jeffreys'
+    }
+    method_display_name = method_names.get(method, method.capitalize())
+
+    if success_term is not None:
+        successes = (df[selected_column] == success_term).sum()
+    else:        
+        successes = df[selected_column].sum()
+
+    trials = len(df)
+    
+    lower, upper = proportion_confint(successes, trials, alpha=1-confidence, method=method)
+
+    code = "from statsmodels.stats.proportion import proportion_confint\n\n"
+    
     if success_term is not None:
         term_str = f"'{success_term}'" if isinstance(success_term, str) else str(success_term)
-        code += f"\nsuccesses = (df['{selected_column}'] == {term_str}).sum()"
+        code += f"successes = (df['{selected_column}'] == {term_str}).sum()\n"
     else:
-        code += f"\nsuccesses = df['{selected_column}'].sum()"
-    code += f"\ntrials = len(df)"
-    code += f"\nlower, upper = proportion_confint(successes, trials, alpha=1-{confidence}, method='wilson')"
-    code += "\nprint(f'Wilson Confidence Interval: ({lower:.4f}, {upper:.4f})')"
+        code += f"successes = df['{selected_column}'].sum()\n"
+        
+    code += "trials = len(df)\n"
+    
+    alpha_val = 1 - confidence
+    code += f"lower, upper = proportion_confint(successes, trials, alpha={alpha_val:.4f}, method='{method}')\n\n"
+    code += f"print(f'{method_display_name} Confidence Interval: ({{lower:.4f}}, {{upper:.4f}})')\n"
+    
     return (lower, upper), code
 
 #################
 # Two proportion tests and confidence intervals
 #################
 
-def perform_fisher_exact_test(df, group_col, outcome_col, alternative='two-sided'):
+# Two-sample z-test for proportions
+def perform_two_proportion_ztest(df, group_col, outcome_col, alternative='two-sided', success_term=None):
     """
-    Perform Fisher's exact test for two proportions.
+    Perform a two-proportion z-test.
 
     Parameters:
     - df: DataFrame containing the data.
-    - group_col: Column name representing the two groups (e.g., 'Shift').
-    - outcome_col: Column name for the binary outcome variable (e.g., 'Status').
-    - alternative: Type of test ('two-sided', 'less', 'greater').
+    - group_col: Column name for the grouping variable.
+    - outcome_col: Column name for the binary outcome variable.
+    - p0: Hypothesized difference in proportions under the null hypothesis (default is 0.0).
+    - alternative: Type of test ('two-sided', 'greater', 'less').
 
     Returns:
-    - statistic: The Odds Ratio.
-    - p_value: p-value of the test.
-    - code: String containing the Python code to reproduce the test.
+    - z-statistic and p-value of the test.
     """
-    
-    contingency_table = pd.crosstab(df[group_col], df[outcome_col])
-    
-    if contingency_table.shape != (2, 2):
-        raise ValueError(f"Fisher's Exact Test requires exactly two categories per column. Current table shape is {contingency_table.shape}.")
+    groups = df[group_col].unique()
+    if len(groups) != 2:
+        raise ValueError("The grouping column must have exactly two unique values.")
 
-    statistic, p_value = fisher_exact(contingency_table, alternative=alternative)
+    group1_name, group2_name = groups
 
-    code = "import pandas as pd\n"
-    code += "from scipy.stats import fisher_exact\n\n"
+    group1_data = df[df[group_col] == group1_name][outcome_col]
+    group2_data = df[df[group_col] == group2_name][outcome_col]
+
+    if success_term is not None:
+        successes = np.array([(group1_data == success_term).sum(), 
+                     (group2_data == success_term).sum()])
+    else:        
+        # implicitly assumes that the outcome column is binary with 1s representing successes and 0s representing failures
+        successes = np.array([group1_data.sum(), group2_data.sum()])
+
+ 
+    trials = [len(group1_data), len(group2_data)]
     
-    code += f"contingency_table = pd.crosstab(df['{group_col}'], df['{outcome_col}'])\n"
-    code += f"statistic, p_value = fisher_exact(contingency_table, alternative='{alternative}')\n\n"
-    
-    code += "print('Contingency Table:')\n"
-    code += "print(contingency_table)\n"
-    code += "print(f'\\nOdds Ratio (Statistic): {statistic:.4f}')\n"
-    code += "print(f'P-value: {p_value:.4f}')\n"
+    statistic, p_value = proportions_ztest(successes, trials, alternative=alternative)
+
+    code = "import numpy as np\n"
+    code += f"from statsmodels.stats.proportion import proportions_ztest\n"
+    code += f"group1_data = df[df['{group_col}'] == '{group1_name}']['{outcome_col}']\n"
+    code += f"group2_data = df[df['{group_col}'] == '{group2_name}']['{outcome_col}']\n"
+    if success_term is not None:
+        term_str = f"'{success_term}'" if isinstance(success_term, str) else str(success_term)
+        code += f"successes = np.array([(group1_data == {term_str}).sum(), (group2_data == {term_str}).sum()])\n" 
+    else:
+        code += f"successes = np.array([group1_data.sum(), group2_data.sum()])\n"
+    code += f"trials = [len(group1_data), len(group2_data)]\n"
+    code += f"statistic, p_value = proportions_ztest(successes, trials, alternative='{alternative}')\n"
+    code += f"print(f'Z-Statistic: {statistic:.4f}')\n"
+    code += f"print(f'P-value: {p_value:.4f}')\n"
     
     return statistic, p_value, code
 
+def get_two_proportion_confint(df, group_col, outcome_col, 
+    method='newcomb', confidence=0.95, success_term=None):
+    # newcomb, wald
+    """Calculate the confidence interval for the difference in proportions between two groups."""
+    
+    groups = df[group_col].unique()
+    if len(groups) != 2:
+        raise ValueError("The grouping column must have exactly two unique values.")
 
+    group1_name, group2_name = groups
+
+    group1_data = df[df[group_col] == group1_name][outcome_col]
+    group2_data = df[df[group_col] == group2_name][outcome_col]
+
+    if success_term is not None:
+        successes = np.array([(group1_data == success_term).sum(), 
+                     (group2_data == success_term).sum()])
+    else:        
+        # implicitly assumes that the outcome column is binary with 1s representing successes and 0s representing failures
+        successes = np.array([group1_data.sum(), group2_data.sum()])
+
+ 
+    trials = [len(group1_data), len(group2_data)]
+
+    alpha = 1 - confidence
+    lower, upper = confint_proportions_2indep(
+        successes[0],
+        trials[0],
+        successes[1],
+        trials[1],
+        method=method,
+        compare='diff',
+        alpha=alpha
+    )
+
+    code = "import numpy as np\n"
+    code += f"from statsmodels.stats.proportion import confint_proportions_2indep\n"
+    code += f"group1_data = df[df['{group_col}'] == '{group1_name}']['{outcome_col}']\n"
+    code += f"group2_data = df[df['{group_col}'] == '{group2_name}']['{outcome_col}']\n"
+    if success_term is not None:
+        term_str = f"'{success_term}'" if isinstance(success_term, str) else str(success_term)
+        code += f"successes = np.array([(group1_data == {term_str}).sum(), (group2_data == {term_str}).sum()])\n"
+    else:
+        code += f"successes = np.array([group1_data.sum(), group2_data.sum()])\n"
+    code += f"trials = [len(group1_data), len(group2_data)]\n"
+    code += f"alpha = 1 - {confidence}\n"
+    code += f"lower, upper = confint_proportions_2indep(successes[0], trials[0], successes[1], trials[1], method={method!r}, compare='diff', alpha=alpha)\n"
+    code += f"print(f'{method.title()} Confidence Interval for Difference in Proportions: ({lower:.4f}, {upper:.4f})')\n"
+
+    return (lower, upper), code

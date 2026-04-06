@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from logic.proportions_logic import perform_one_proportion_binomial_test, perform_one_proportion_ztest, get_clopper_pearson_interval, get_wilson_interval
+from logic.proportions_logic import perform_one_proportion_binomial_test, perform_one_proportion_ztest, get_one_proportion_interval
 from gui.components import show_code
 
 def render_oneprop_test_page():
@@ -98,11 +98,12 @@ def render_oneprop_test_page():
 
     with st.expander("Clopper-Pearson Interval", expanded=True):
         st.markdown("### Clopper-Pearson Confidence Interval for the proportion")
-        (lower, upper), code = get_clopper_pearson_interval(
+        (lower, upper), code = get_one_proportion_interval(
             df=df, 
             selected_column=selected_col, 
             confidence=confidence,    
-            success_term=success_term
+            success_term=success_term,
+            method='beta'
         )
         st.write("### Results")
         st.metric(f"**Confidence Interval ({confidence*100:.0f}%):**", f"({lower:.4f}, {upper:.4f})")
@@ -111,11 +112,12 @@ def render_oneprop_test_page():
 
     with st.expander("Wilson Interval", expanded=False):
         st.markdown("### Wilson Confidence Interval for the proportion")
-        (lower, upper), code = get_wilson_interval(
+        (lower, upper), code = get_one_proportion_interval(
             df=df, 
             selected_column=selected_col, 
             confidence=confidence,    
-            success_term=success_term
+            success_term=success_term,
+            method='wilson'
         )
         st.write("### Results")
         st.metric(f"**Confidence Interval ({confidence*100:.0f}%):**", f"({lower:.4f}, {upper:.4f})")

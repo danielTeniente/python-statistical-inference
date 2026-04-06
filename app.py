@@ -17,6 +17,7 @@ from gui.ovr_variances_page import render_ovr_variances_page
 from gui.ovr_mean_page import render_ovr_means_page
 from gui.ovr_median_page import render_ovr_medians_page
 from gui.oneprop_page import render_oneprop_test_page
+from gui.two_prop_page import render_twoprop_test_page
 
 # Global Configuration
 st.set_page_config(page_title="Statistics in Python", layout="wide")
@@ -88,6 +89,8 @@ with st.sidebar.expander("One-vs-Rest Tests", expanded=False):
 with st.sidebar.expander("Proportion Tests", expanded=False):
     if st.button("One-Proportion Test", use_container_width=True):
         change_page("One-Proportion Test")
+    if st.button("Two-Proportions Test", use_container_width=True):
+        change_page("Two-Proportions Test")
 
 
 # --- PAGE ROUTING ---
@@ -147,3 +150,5 @@ elif page == "One-vs-Rest Median Tests":
 
 elif page == "One-Proportion Test":
     render_oneprop_test_page()
+elif page == "Two-Proportions Test":
+    render_twoprop_test_page()
