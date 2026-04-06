@@ -1,11 +1,10 @@
 import streamlit as st
 import pandas as pd
-from logic.proportions_logic import perform_one_proportion_binomial_test
+from logic.proportions_logic import perform_one_proportion_binomial_test, perform_one_proportion_ztest, get_clopper_pearson_interval, get_wilson_interval
 from gui.components import show_code
 
 def render_oneprop_test_page():
     st.title("One Proportion Test")
-    st.markdown("### Exact binomial test for the proportion")
 
     if "df" not in st.session_state or st.session_state.df is None:
         st.warning("⚠️ No data found. Please upload a file in the 'Upload Dataset' section first.")
@@ -40,6 +39,7 @@ def render_oneprop_test_page():
         return
 
     selected_col = st.selectbox("Select variable", valid_cols)
+    confidence = st.slider("Confidence level", 0.80, 0.99, 0.95, 0.01)
     
     unique_vals = df[selected_col].dropna().unique()
     is_numeric = pd.api.types.is_numeric_dtype(df[selected_col])
@@ -63,18 +63,64 @@ def render_oneprop_test_page():
     )    
     
     alternative = st.selectbox("Select alternative hypothesis", ["two-sided", "greater", "less"])
-    
-    stat, p_val, code = perform_one_proportion_binomial_test(
-        df=df, 
-        selected_column=selected_col, 
-        p0=p0, 
-        alternative=alternative, 
-        success_term=success_term
-    )
-    
-    show_code(code)
-    
-    st.write("### Results")
-    st.write(f"**Proportion of Successes (Statistic):** {stat:.4f} ({stat*100:.2f}%)")
-    st.write(f"**p-value:** {p_val:.4f}")
-    
+
+    with st.expander("Binomial Test", expanded=True):
+        st.markdown("### Exact binomial test for the proportion")
+        stat, p_val, code = perform_one_proportion_binomial_test(
+            df=df, 
+            selected_column=selected_col, 
+            p0=p0, 
+            alternative=alternative, 
+            success_term=success_term
+        )
+        
+        show_code(code)
+        
+        st.write("### Results")
+        st.metric(f"**Proportion of Successes (Statistic):**", f"{stat:.4f} ({stat*100:.2f}%)")
+        st.metric(f"**p-value:**", f"{p_val:.4f}")
+
+    with st.expander("Z-Test", expanded=False):
+        st.markdown("### Z-test for the proportion")
+        stat, p_val, code = perform_one_proportion_ztest(
+            df=df, 
+            selected_column=selected_col, 
+            p0=p0, 
+            alternative=alternative, 
+            success_term=success_term
+        )
+        
+        show_code(code)
+        
+        st.write("### Results")
+        st.metric(f"**Statistic:**", f"{stat:.4f} ({stat*100:.2f}%)")
+        st.metric(f"**p-value:**", f"{p_val:.4f}")
+
+    with st.expander("Clopper-Pearson Interval", expanded=True):
+        st.markdown("### Clopper-Pearson Confidence Interval for the proportion")
+        (lower, upper), code = get_clopper_pearson_interval(
+            df=df, 
+            selected_column=selected_col, 
+            confidence=confidence,    
+            success_term=success_term
+        )
+        st.write("### Results")
+        st.metric(f"**Confidence Interval ({confidence*100:.0f}%):**", f"({lower:.4f}, {upper:.4f})")
+        
+        show_code(code)
+
+    with st.expander("Wilson Interval", expanded=False):
+        st.markdown("### Wilson Confidence Interval for the proportion")
+        (lower, upper), code = get_wilson_interval(
+            df=df, 
+            selected_column=selected_col, 
+            confidence=confidence,    
+            success_term=success_term
+        )
+        st.write("### Results")
+        st.metric(f"**Confidence Interval ({confidence*100:.0f}%):**", f"({lower:.4f}, {upper:.4f})")
+        
+        show_code(code)        
+        
+
+        

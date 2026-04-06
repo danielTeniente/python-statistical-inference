@@ -1,3 +1,4 @@
+import pandas as pd
 from scipy.stats import binomtest, fisher_exact
 from statsmodels.stats.proportion import proportions_ztest, proportion_confint
 
@@ -23,7 +24,6 @@ def perform_one_proportion_binomial_test(df, selected_column, p0=0.5, alternativ
     - code: String containing the Python code to reproduce the test.
     """
     
-    # Flujo 1 y 2: Determinar cómo contar los éxitos
     if success_term is not None:
         successes = (df[selected_column] == success_term).sum()
     else:
@@ -55,7 +55,7 @@ def perform_one_proportion_binomial_test(df, selected_column, p0=0.5, alternativ
     
     return statistic, p_value, code
 
-def perform_one_proportion_ztest(df, selected_column, p0=0.5, alternative='two-sided'):
+def perform_one_proportion_ztest(df, selected_column, p0=0.5, alternative='two-sided', success_term=None):
     """
     Perform a one-proportion z-test.
 
@@ -68,19 +68,26 @@ def perform_one_proportion_ztest(df, selected_column, p0=0.5, alternative='two-s
     Returns:
     - z-statistic and p-value of the test.
     """
-    successes = df[selected_column].sum()
+    if success_term is not None:
+        successes = (df[selected_column] == success_term).sum()
+    else:
+        successes = df[selected_column].sum()
     trials = len(df)
     statistic, p_value = proportions_ztest(successes, trials, value=p0, alternative=alternative)
 
     code = f"from statsmodels.stats.proportion import proportions_ztest"
-    code += f"\n\nsuccesses = df['{selected_column}'].sum()"
+    if success_term is not None:
+        term_str = f"'{success_term}'" if isinstance(success_term, str) else str(success_term)
+        code += f"\nsuccesses = (df['{selected_column}'] == {term_str}).sum()"
+    else:
+        code += f"\nsuccesses = df['{selected_column}'].sum()"
     code += f"\ntrials = len(df)"
     code += f"\nstatistic, p_value = proportions_ztest(successes, trials, value=p0, alternative=alternative)"
     code += "\nprint(f'Z-Statistic: {statistic:.4f}')"
     code += "\nprint(f'P-value: {p_value:.4f}')"
     return statistic, p_value, code
 
-def get_clopper_person_interval(df, selected_column, confidence=0.95):
+def get_clopper_pearson_interval(df, selected_column, confidence=0.95, success_term=None):
     """
     Calculate the Clopper-Pearson confidence interval for a proportion.
 
@@ -92,18 +99,26 @@ def get_clopper_person_interval(df, selected_column, confidence=0.95):
     Returns:
     - Tuple containing the lower and upper bounds of the confidence interval.
     """
-    successes = df[selected_column].sum()
+    if success_term is not None:
+        successes = (df[selected_column] == success_term).sum()
+    else:        
+        successes = df[selected_column].sum()
+
     trials = len(df)
     lower, upper = proportion_confint(successes, trials, alpha=1-confidence, method='beta')
 
     code = f"from statsmodels.stats.proportion import proportion_confint"
-    code += f"\n\nsuccesses = df['{selected_column}'].sum()"
+    if success_term is not None:
+        term_str = f"'{success_term}'" if isinstance(success_term, str) else str(success_term)
+        code += f"\nsuccesses = (df['{selected_column}'] == {term_str}).sum()"
+    else:
+        code += f"\nsuccesses = df['{selected_column}'].sum()"
     code += f"\ntrials = len(df)"
     code += f"\nlower, upper = proportion_confint(successes, trials, alpha=1-{confidence}, method='beta')"
     code += "\nprint(f'Clopper-Pearson Confidence Interval: ({lower:.4f}, {upper:.4f})')"
     return (lower, upper), code
 
-def get_wilson_interval(df, selected_column, confidence=0.95):
+def get_wilson_interval(df, selected_column, confidence=0.95, success_term=None):
     """
     Calculate the Wilson confidence interval for a proportion.
 
@@ -115,12 +130,19 @@ def get_wilson_interval(df, selected_column, confidence=0.95):
     Returns:
     - Tuple containing the lower and upper bounds of the confidence interval.
     """
-    successes = df[selected_column].sum()
+    if success_term is not None:
+        successes = (df[selected_column] == success_term).sum()
+    else:        
+        successes = df[selected_column].sum()
     trials = len(df)
     lower, upper = proportion_confint(successes, trials, alpha=1-confidence, method='wilson')
-
+    
     code = f"from statsmodels.stats.proportion import proportion_confint"
-    code += f"\n\nsuccesses = df['{selected_column}'].sum()"
+    if success_term is not None:
+        term_str = f"'{success_term}'" if isinstance(success_term, str) else str(success_term)
+        code += f"\nsuccesses = (df['{selected_column}'] == {term_str}).sum()"
+    else:
+        code += f"\nsuccesses = df['{selected_column}'].sum()"
     code += f"\ntrials = len(df)"
     code += f"\nlower, upper = proportion_confint(successes, trials, alpha=1-{confidence}, method='wilson')"
     code += "\nprint(f'Wilson Confidence Interval: ({lower:.4f}, {upper:.4f})')"
@@ -130,23 +152,40 @@ def get_wilson_interval(df, selected_column, confidence=0.95):
 # Two proportion tests and confidence intervals
 #################
 
-def perform_two_prop_fisher_exact_test(df, col1, col2):
+def perform_fisher_exact_test(df, group_col, outcome_col, alternative='two-sided'):
     """
     Perform Fisher's exact test for two proportions.
 
     Parameters:
     - df: DataFrame containing the data.
-    - col1: First binary column name.
-    - col2: Second binary column name.
+    - group_col: Column name representing the two groups (e.g., 'Shift').
+    - outcome_col: Column name for the binary outcome variable (e.g., 'Status').
+    - alternative: Type of test ('two-sided', 'less', 'greater').
 
     Returns:
-    - p-value of the test.
+    - statistic: The Odds Ratio.
+    - p_value: p-value of the test.
+    - code: String containing the Python code to reproduce the test.
     """
-    a 
-    _, p_value = fisher_exact(contingency_table)
+    
+    contingency_table = pd.crosstab(df[group_col], df[outcome_col])
+    
+    if contingency_table.shape != (2, 2):
+        raise ValueError(f"Fisher's Exact Test requires exactly two categories per column. Current table shape is {contingency_table.shape}.")
 
-    code = f"from scipy.stats import fisher_exact"
-    code += f"\n\ncontingency_table = pd.crosstab(df['{col1}'], df['{col2}'])"
-    code += f"\n_, p_value = fisher_exact(contingency_table)"
-    code += "\nprint(f'P-value: {p_value:.4f}')"
-    return p_value, code
+    statistic, p_value = fisher_exact(contingency_table, alternative=alternative)
+
+    code = "import pandas as pd\n"
+    code += "from scipy.stats import fisher_exact\n\n"
+    
+    code += f"contingency_table = pd.crosstab(df['{group_col}'], df['{outcome_col}'])\n"
+    code += f"statistic, p_value = fisher_exact(contingency_table, alternative='{alternative}')\n\n"
+    
+    code += "print('Contingency Table:')\n"
+    code += "print(contingency_table)\n"
+    code += "print(f'\\nOdds Ratio (Statistic): {statistic:.4f}')\n"
+    code += "print(f'P-value: {p_value:.4f}')\n"
+    
+    return statistic, p_value, code
+
+
