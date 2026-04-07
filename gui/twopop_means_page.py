@@ -57,8 +57,10 @@ def render_twopop_means_page():
         st.markdown("### Plot of the confidence interval for the difference in means")
         st.markdown('**Get the sample difference in means**')
         sample_diff, code_diff = get_sample_difference_in_means(df, selected_num_col, selected_cat_col)
-        st.markdown(f'{sample_diff:.4f}')
+        st.metric("Sample Difference in Means", f"{sample_diff:.4f}")
+
         show_code(code_diff)
+        
         fig, code_plot = plot_confidence_interval(ci[0], ci[1], 
             sample_diff, title="Confidence Interval for the Difference in Means", 
             x_label="Difference in Means", y_label="Means Test")

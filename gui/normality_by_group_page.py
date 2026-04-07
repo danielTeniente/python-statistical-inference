@@ -39,7 +39,7 @@ def render_normality_test_by_group_page():
     selected_categories = st.multiselect(
         "Select populations to test (minimum 1 required):",
         available_categories,
-        default=available_categories # Seleccionadas todas por defecto
+        default=available_categories 
     )
     
     if len(selected_categories) == 0:

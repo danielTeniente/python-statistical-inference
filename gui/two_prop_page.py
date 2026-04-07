@@ -106,7 +106,7 @@ def render_twoprop_test_page():
 
     # --- Intervalos de Confianza ---
     with st.expander("Newcombe Confidence Interval", expanded=True):
-        st.markdown("### Newcombe Confidence Interval for the difference ($p_1 - p_2$)")
+        st.markdown("### Newcombe Confidence Interval for the difference in proportions")
         (lower, upper), code = get_two_proportion_confint(
             df=df, 
             group_col=group_col, 
@@ -122,7 +122,7 @@ def render_twoprop_test_page():
         st.metric(f"**Difference CI ({confidence*100:.0f}%):**", f"({lower:.4f}, {upper:.4f})")
 
     with st.expander("Wald Confidence Interval", expanded=False):
-        st.markdown("### Wald Confidence Interval for the difference ($p_1 - p_2$)")
+        st.markdown("### Wald Confidence Interval for the difference in proportions")
         (lower, upper), code = get_two_proportion_confint(
             df=df, 
             group_col=group_col, 

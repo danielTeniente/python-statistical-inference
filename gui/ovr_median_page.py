@@ -25,7 +25,7 @@ def render_ovr_medians_page():
     valid_categorical_cols = [col for col in all_categorical_cols if df[col].nunique() > 2]
     
     if not valid_categorical_cols:
-        st.error("Error: The dataset must contain at least one categorical column with 3 or more categories (e.g., North/South/East) to perform a One-vs-Rest test.")
+        st.error("Error: The dataset must contain at least one categorical column with 3 or more categories to perform a One-vs-Rest test.")
         st.info("For columns with exactly 2 categories, please use the standard 'Group vs. Group' tests.")
         return
     

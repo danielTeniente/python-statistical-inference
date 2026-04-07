@@ -71,7 +71,7 @@ def render_ovr_means_page():
             df, selected_num_col, selected_cat_col, target_cat
         )
         
-        st.markdown(f'{sample_diff:.4f}')
+        st.metric("Sample Difference in Means", f"{sample_diff:.4f}")
         show_code(code_diff)
         
         fig, code_plot = plot_confidence_interval(

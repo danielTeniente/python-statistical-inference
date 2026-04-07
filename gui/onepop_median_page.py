@@ -5,7 +5,7 @@ from logic.onepop_mean_logic import perform_ttest, perform_wilcoxon
 
 def render_onepop_median_page():
     st.title("One population median test")
-    st.markdown("### One sample Wilcoxon signed-rank test for the median if the population is not normally distributed")
+    st.markdown("### One sample Wilcoxon signed-rank test for the median")
 
     if "df" not in st.session_state or st.session_state.df is None:
         st.warning("⚠️ No data found. Please upload a file in the 'Upload Dataset' section first.")

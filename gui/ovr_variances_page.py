@@ -27,7 +27,7 @@ def render_ovr_variances_page():
                 
     # 3. Handle case where no valid categorical column exists
     if not valid_categorical_cols:
-        st.error("Error: The dataset must contain at least one categorical column with 3 or more categories (e.g., North/South/East) to perform a One-vs-Rest test.")
+        st.error("Error: The dataset must contain at least one categorical column with 3 or more categories to perform a One-vs-Rest test.")
         st.info("For columns with exactly 2 categories, please use the standard 'Group vs. Group' tests.")
         return
 
@@ -55,10 +55,8 @@ def render_ovr_variances_page():
 
     st.divider() 
     
-    # 5. Execute Tests
     with st.expander("F-test for equality of variances", expanded=True):
-        st.markdown("### F-test to compare variances if both populations are normally distributed")
-        # Llamar a la función OvR pasando target_cat
+        st.markdown("### F-test to compare variances")
         f_stat, p_value, ci, code = perform_ftest_ovr(
             df, selected_num_col, selected_cat_col, target_cat, alternative, confidence
         )
@@ -70,7 +68,7 @@ def render_ovr_variances_page():
         res3.metric("Confidence Interval", f"({ci[0]:.4f}, {ci[1]:.4f})")
         
     with st.expander("Levene's test for equality of variances", expanded=False):
-        st.markdown("### Levene's test for equal variances if the populations are not normally distributed")
+        st.markdown("### Levene's test for equal variances")
         stat_levene, p_value_levene, ci_levene, code_levene = perform_levene_ovr(
             df, selected_num_col, selected_cat_col, target_cat, confidence
         )

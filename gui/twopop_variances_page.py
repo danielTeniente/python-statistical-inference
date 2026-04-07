@@ -47,7 +47,7 @@ def render_twopop_variances_page():
     st.divider() 
     
     with st.expander("F-test for equality of variances", expanded=True):
-        st.markdown("### F-test to compare variances if both populations are normally distributed")
+        st.markdown("### F-test to compare variances")
         f_stat, p_value, ci, code = perform_ftest(
             df, selected_num_col, selected_cat_col, alternative, confidence
         )
@@ -58,7 +58,7 @@ def render_twopop_variances_page():
         res3.metric("Confidence Interval", f"({ci[0]:.4f}, {ci[1]:.4f})")
         
     with st.expander("Levene's test for equality of variances", expanded=False):
-        st.markdown("### Levene's test for equal variances if the populations are not normally distributed")
+        st.markdown("### Levene's test for equal variances")
         stat, p_value_levene, ci_levene, code_levene = perform_levene(
             df, selected_num_col, selected_cat_col, confidence
         )

@@ -22,7 +22,7 @@ def render_kpop_medians_page():
     valid_categorical_cols = [col for col in all_categorical_cols if df[col].nunique() >= 3]
             
     if not valid_categorical_cols:
-        st.error("Error: The dataset must contain at least one categorical column with 3 or more categories (e.g., North/South/East) to perform these tests.")
+        st.error("Error: The dataset must contain at least one categorical column with 3 or more categories to perform these tests.")
         st.info("Please review your dataset or use a two-population test instead.")
         return
 

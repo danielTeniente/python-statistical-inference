@@ -5,7 +5,7 @@ from logic.onepop_mean_logic import perform_ttest
 
 def render_onepop_mean_page():
     st.title("One population mean test")
-    st.markdown("### One sample t-test if the population is normally distributed")
+    st.markdown("### One sample t-test")
     
     if "df" not in st.session_state or st.session_state.df is None:
         st.warning("⚠️ No data found. Please upload a file in the 'Upload Dataset' section first.")

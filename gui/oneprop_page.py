@@ -74,11 +74,10 @@ def render_oneprop_test_page():
             success_term=success_term
         )
         
-        show_code(code)
-        
         st.write("### Results")
         st.metric(f"**Proportion of Successes (Statistic):**", f"{stat:.4f} ({stat*100:.2f}%)")
         st.metric(f"**p-value:**", f"{p_val:.4f}")
+        show_code(code)
 
     with st.expander("Z-Test", expanded=False):
         st.markdown("### Z-test for the proportion")
@@ -90,11 +89,10 @@ def render_oneprop_test_page():
             success_term=success_term
         )
         
-        show_code(code)
-        
         st.write("### Results")
         st.metric(f"**Statistic:**", f"{stat:.4f} ({stat*100:.2f}%)")
         st.metric(f"**p-value:**", f"{p_val:.4f}")
+        show_code(code)
 
     with st.expander("Clopper-Pearson Interval", expanded=True):
         st.markdown("### Clopper-Pearson Confidence Interval for the proportion")

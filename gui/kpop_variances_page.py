@@ -21,7 +21,7 @@ def render_kpop_variances_page():
     valid_categorical_cols = [col for col in all_categorical_cols if df[col].nunique() >= 3]
             
     if not valid_categorical_cols:
-        st.error("Error: The dataset must contain at least one categorical column with 3 or more categories (e.g., North/South/East) to perform these tests.")
+        st.error("Error: The dataset must contain at least one categorical column with 3 or more categories to perform these tests.")
         st.info("Please review your dataset or use a two-population test instead.")
         return
 
@@ -52,7 +52,7 @@ def render_kpop_variances_page():
 
     st.divider()
     with st.expander("Bartlett's test for equal variances", expanded=True):
-        st.markdown("### Bartlett's test for equal variances if all populations are normally distributed")
+        st.markdown("### Bartlett's test for equal variances")
         stat, p_value, code = perform_bartlett(filtered_df, selected_num_col, selected_cat_col)
         show_code(code)
         
@@ -61,7 +61,7 @@ def render_kpop_variances_page():
         res2.metric("P-value", f"{p_value:.4f}")
 
     with st.expander("Levene's test for equal variances", expanded=False):
-        st.markdown("### Levene's test for equal variances if at least one population is not normally distributed")
+        st.markdown("### Levene's test for equal variances")
         # Assuming perform_levene in kpop_logic takes (df, num_col, cat_col) just like Bartlett
         stat_l, p_value_l, code_l = perform_levene(filtered_df, selected_num_col, selected_cat_col)
         show_code(code_l)
