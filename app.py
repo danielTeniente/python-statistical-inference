@@ -19,6 +19,7 @@ from gui.ovr_median_page import render_ovr_medians_page
 from gui.oneprop_page import render_oneprop_test_page
 from gui.two_prop_page import render_twoprop_test_page
 from gui.about_page import render_about_page
+from gui.create_cat_variables import render_create_categorical_page
 
 # Global Configuration
 st.set_page_config(page_title="Statistics in Python", layout="wide")
@@ -49,6 +50,10 @@ with st.sidebar.expander("Descriptive Statistics", expanded=False):
     if st.button("Categorical Variables", use_container_width=True):
         change_page("Descriptive - Categorical")
 
+with st.sidebar.expander("Data Transformation", expanded=False):
+    if st.button("Create Categorical Variable", use_container_width=True):
+        change_page("Create Categorical Variable")
+        
 with st.sidebar.expander("Normality Tests", expanded=False):
     if st.button("Whole Sample Normality", use_container_width=True):
         change_page("Whole Sample Normality")
@@ -92,6 +97,7 @@ with st.sidebar.expander("Proportion Tests", expanded=False):
         change_page("One-Proportion Test")
     if st.button("Two-Proportions Test", use_container_width=True):
         change_page("Two-Proportions Test")
+
 
 if st.sidebar.button("About", use_container_width=True):
     change_page("About")
@@ -159,3 +165,6 @@ elif page == "Two-Proportions Test":
 
 elif page == "About":
     render_about_page()
+
+elif page == "Create Categorical Variable":
+    render_create_categorical_page()
