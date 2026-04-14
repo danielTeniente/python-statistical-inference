@@ -20,6 +20,7 @@ from gui.oneprop_page import render_oneprop_test_page
 from gui.two_prop_page import render_twoprop_test_page
 from gui.about_page import render_about_page
 from gui.create_cat_variables import render_create_categorical_page
+from gui.kprop_page import render_kprop_test_page
 
 # Global Configuration
 st.set_page_config(page_title="Statistics in Python", layout="wide")
@@ -97,6 +98,8 @@ with st.sidebar.expander("Proportion Tests", expanded=False):
         change_page("One-Proportion Test")
     if st.button("Two-Proportions Test", use_container_width=True):
         change_page("Two-Proportions Test")
+    if st.button("K Proportions Test", use_container_width=True):
+        change_page("K Proportions Test")
 
 
 if st.sidebar.button("About", use_container_width=True):
@@ -162,6 +165,9 @@ elif page == "One-Proportion Test":
     render_oneprop_test_page()
 elif page == "Two-Proportions Test":
     render_twoprop_test_page()
+
+elif page == "K Proportions Test":
+    render_kprop_test_page()
 
 elif page == "About":
     render_about_page()
