@@ -15,7 +15,7 @@ def get_contingency_table(df, var1_col, var2_col):
 
 def perform_fisher_exact_test(df, var1_col, var2_col, alternative='two-sided'):
     """
-    Perform Fisher's Exact Test
+    Perform Fisher's Exact Test.
     Automatically uses Monte Carlo simulation for tables larger than 2x2.
 
     Parameters:
@@ -26,9 +26,8 @@ def perform_fisher_exact_test(df, var1_col, var2_col, alternative='two-sided'):
                    Note: 'less' and 'greater' are only valid for 2x2 tables.
 
     Returns:
-    - contingency_table: The generated crosstab (pandas DataFrame).
-    - p_value: The calculated p-value.
     - statistic: The Odds Ratio (only for 2x2 tables) or None (for larger tables).
+    - p_value: The calculated p-value.
     - code: String containing the Python code to reproduce the test.
     """
     contingency_table = pd.crosstab(df[var1_col], df[var2_col])
@@ -52,10 +51,10 @@ def perform_fisher_exact_test(df, var1_col, var2_col, alternative='two-sided'):
         
     else:
         rng = np.random.default_rng()
-        metodo_mc = MonteCarloMethod(rng=rng)
+        mc_method = MonteCarloMethod(rng=rng)
         
-        resultado = fisher_exact(contingency_table, method=metodo_mc)
-        p_value = resultado.pvalue
+        result = fisher_exact(contingency_table, method=mc_method)
+        p_value = result.pvalue
         
         code = (
             "import pandas as pd\n"
@@ -64,7 +63,7 @@ def perform_fisher_exact_test(df, var1_col, var2_col, alternative='two-sided'):
             f"contingency_table = pd.crosstab(df['{var1_col}'], df['{var2_col}'])\n"
             "rng = np.random.default_rng()\n"
             "method = MonteCarloMethod(rng=rng)\n"
-            "result = fisher_exact(contingency_table, method=method) #does not support alternative parameter\n\n"
+            "result = fisher_exact(contingency_table, method=method) # Does not support alternative parameter\n\n"
             "print('Contingency Table:')\n"
             "print(contingency_table)\n"
             "print(f'\\nP-value (Monte Carlo): {result.pvalue:.4f}')\n"
@@ -74,14 +73,14 @@ def perform_fisher_exact_test(df, var1_col, var2_col, alternative='two-sided'):
 
 def perform_chi_square_test(df, var1_col, var2_col, correction=False):
     """
-    Realiza la prueba Chi-cuadrado de Independencia o de Homogeneidad (Proporciones).
+    Performs the Chi-square Test of Independence or Homogeneity (Proportions).
     
     Parameters:
-    - df: DataFrame tha has all data.
+    - df: DataFrame that contains all the data.
     - var1_col: Name of the first categorical variable.
     - var2_col: Name of the second categorical variable.
-    - correction: Boolean. If it is true apply the Yates correction.
-                  (recommended for 2x2 tables).
+    - correction: Boolean. If True, applies Yates' continuity correction.
+                  (Recommended for 2x2 tables).
                   
     Returns:
     - chi2_stat: The calculated Chi-square statistic.
@@ -90,7 +89,7 @@ def perform_chi_square_test(df, var1_col, var2_col, correction=False):
     """
     contingency_table = pd.crosstab(df[var1_col], df[var2_col])
     
-    # Realizar el test de Chi-cuadrado
+    # Perform the Chi-square test
     chi2_stat, p_value, dof, expected = chi2_contingency(contingency_table, correction=correction)
     
     code = (
@@ -98,11 +97,11 @@ def perform_chi_square_test(df, var1_col, var2_col, correction=False):
         "from scipy.stats import chi2_contingency\n\n"
         f"contingency_table = pd.crosstab(df['{var1_col}'], df['{var2_col}'])\n"
         f"chi2_stat, p_value, dof, expected = chi2_contingency(contingency_table, correction={correction})\n\n"
-        "print('Tabla de Contingencia:')\n"
+        "print('Contingency Table:')\n"
         "print(contingency_table)\n"
-        "print(f'\\nEstadístico Chi-cuadrado: {chi2_stat:.4f}')\n"
+        "print(f'\\nChi-square Statistic: {chi2_stat:.4f}')\n"
         "print(f'P-value: {p_value:.4f}')\n"
-        "print(f'Grados de libertad (dof): {dof}')\n"
+        "print(f'Degrees of Freedom (dof): {dof}')\n"
     )
     
     return chi2_stat, p_value, code
