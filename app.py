@@ -23,6 +23,8 @@ from gui.create_cat_variables import render_create_categorical_page
 from gui.kprop_page import render_kprop_test_page
 from gui.independence_page import render_independence_test_page
 from gui.association_page import render_association_measures_page
+from gui.corr_matrix_plot_page import render_correlation_heatmap_page
+from gui.correlation_page import render_correlation_page
 
 # Global Configuration
 st.set_page_config(page_title="Statistics in Python", layout="wide")
@@ -109,6 +111,12 @@ with st.sidebar.expander("Association and Independence Tests", expanded=False):
     if st.button('Measures of Association', use_container_width=True):
         change_page("Measures of Association")
 
+with st.sidebar.expander("Correlation Analysis", expanded=False):
+    if st.button("Correlation Analysis", use_container_width=True):
+        change_page("Correlation Analysis")
+    if st.button("Correlation Matrix Heatmap", use_container_width=True):
+        change_page("Correlation Matrix Heatmap")        
+
 if st.sidebar.button("About", use_container_width=True):
     change_page("About")
 
@@ -179,6 +187,11 @@ elif page == "Tests of Independence":
     render_independence_test_page()
 elif page == "Measures of Association":
     render_association_measures_page()
+
+elif page == "Correlation Analysis":
+    render_correlation_page()
+elif page == "Correlation Matrix Heatmap":
+    render_correlation_heatmap_page()    
 
 elif page == "About":
     render_about_page()
