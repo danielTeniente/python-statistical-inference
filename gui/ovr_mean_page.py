@@ -7,6 +7,7 @@ from logic.twopop_logic import plot_confidence_interval
 def render_ovr_means_page():
     st.title("One-vs-Rest: Means Tests")
     
+    # --- 1. Data Validation ---
     if "df" not in st.session_state or st.session_state.df is None:
         st.warning("⚠️ No data found. Please upload a file in the 'Upload Dataset' section first.")
         return
@@ -19,14 +20,15 @@ def render_ovr_means_page():
         st.error("The dataset does not contain any numeric columns.")
         return
 
+    # Lightweight check for valid categorical columns
     valid_categorical_cols = [col for col in all_categorical_cols if df[col].nunique() > 2]
     
     if not valid_categorical_cols:
-        st.error("Error: The dataset must contain at least one categorical column with 3 or more categories (e.g., North/South/East) to perform a One-vs-Rest test.")
-        st.info("For columns with exactly 2 categories, please use the standard 'Group vs. Group' tests.")
+        st.error("Error: The dataset must contain at least one categorical column with 3 or more categories.")
         return
     
-    st.markdown("### Test Setup")
+    # --- 2. Test Setup (UI Selection) ---
+    st.markdown("### Configuration")
     col1, col2, col3 = st.columns(3)
     with col1:
         selected_num_col = st.selectbox("Select numerical variable", numeric_cols, key="ovr_mean_num")
@@ -47,39 +49,86 @@ def render_ovr_means_page():
         
     equal_var = st.checkbox("Assume equal variances", value=True, key="ovr_equal_var")
 
-    st.divider() 
+    # --- 3. Context ID and Cache Management ---
+    # Construct an ID that uniquely identifies the current test configuration
+    current_context_id = f"{selected_num_col}_{selected_cat_col}_{target_cat}_{alternative}_{confidence}_{equal_var}"
+
+    # If parameters change, we clear the saved results for this specific page
+    if ("ovr_means_state" not in st.session_state or 
+        st.session_state.get("ovr_means_id") != current_context_id):
         
-    st.markdown("### T-test to compare means")
-    t_stat, p_value, ci, code = perform_ttest_ovr(
-        df, selected_num_col, selected_cat_col, target_cat, alternative, confidence, equal_var
-    )
-    
-    show_code(code)
-    
-    res1, res2, res3 = st.columns(3)
-    res1.metric("T-statistic", f"{t_stat:.4f}")
-    res2.metric(f"P-value ({alternative})", f"{p_value:.4f}")
-    res3.metric("Confidence Interval", f"({ci[0]:.4f}, {ci[1]:.4f})")
-        
-    # 6. Gráfico del Intervalo de Confianza
-    with st.expander("Plot of the confidence interval", expanded=False):
-        st.markdown("### Plot of the confidence interval for the difference in means")
-        st.markdown('**Get the sample difference in means**')
-        
-        # Llamar a la versión _ovr que calcula la diferencia entre target y el resto
-        sample_diff, code_diff = get_sample_difference_in_means_ovr(
-            df, selected_num_col, selected_cat_col, target_cat
-        )
-        
-        st.metric("Sample Difference in Means", f"{sample_diff:.4f}")
-        show_code(code_diff)
-        
-        fig, code_plot = plot_confidence_interval(
-            ci[0], ci[1], sample_diff, 
-            title=f"Confidence Interval for Difference in Means ({target_cat} - Rest)", 
-            x_label="Difference in Means", 
-            y_label="Means Test"
-        )
-        
-        show_code(code_plot)
-        st.pyplot(fig)
+        st.session_state.ovr_means_state = {}  # Clean dictionary for results
+        st.session_state.ovr_means_id = current_context_id
+
+    # Reference to the isolated state dictionary
+    state = st.session_state.ovr_means_state
+
+    st.divider()
+
+    # --- 4. Granular Execution (On-Demand) ---
+
+    # SECTION: Statistical T-test
+    with st.expander("🧪 1. T-test to Compare Means (One-vs-Rest)", expanded=not state.get("ttest")):
+        if st.button("Run Means Comparison", key="btn_ovr_ttest"):
+            with st.spinner("Computing statistics..."):
+                t_stat, p_value, ci, code = perform_ttest_ovr(
+                    df, selected_num_col, selected_cat_col, target_cat, alternative, confidence, equal_var
+                )
+                state["ttest"] = {
+                    "t_stat": t_stat,
+                    "p_value": p_value,
+                    "ci": ci,
+                    "code": code
+                }
+
+        if "ttest" in state:
+            res = state["ttest"]
+            show_code(res["code"])
+            m1, m2, m3 = st.columns(3)
+            m1.metric("T-statistic", f"{res['t_stat']:.4f}")
+            m2.metric(f"P-value ({alternative})", f"{res['p_value']:.4f}")
+            m3.metric("Confidence Interval", f"({res['ci'][0]:.4f}, {res['ci'][1]:.4f})")
+
+    # SECTION: Confidence Interval Plot
+    with st.expander("📊 2. Visual Analysis (Confidence Interval Plot)", expanded=False):
+        if st.button("Generate CI Plot", key="btn_ovr_plot"):
+            with st.spinner("Generating visualization..."):
+                # Ensure the CI is available from state or calculate if missing
+                if "ttest" not in state:
+                    t_stat, p_value, ci, _ = perform_ttest_ovr(
+                        df, selected_num_col, selected_cat_col, target_cat, alternative, confidence, equal_var
+                    )
+                else:
+                    ci = state["ttest"]["ci"]
+
+                # Calculate sample difference for OVR
+                sample_diff, code_diff = get_sample_difference_in_means_ovr(
+                    df, selected_num_col, selected_cat_col, target_cat
+                )
+                
+                # Generate plot
+                fig, code_plot = plot_confidence_interval(
+                    ci[0], ci[1], sample_diff, 
+                    title=f"CI for Difference in Means ({target_cat} - Rest)", 
+                    x_label="Difference in Means", 
+                    y_label="Means Test"
+                )
+                
+                state["plot_data"] = {
+                    "diff": sample_diff,
+                    "code_diff": code_diff,
+                    "fig": fig,
+                    "code_plot": code_plot
+                }
+
+        if "plot_data" in state:
+            p_res = state["plot_data"]
+            st.metric("Sample Difference in Means", f"{p_res['diff']:.4f}")
+            
+            st.markdown("**Sample Difference Logic:**")
+            show_code(p_res["code_diff"])
+            
+            st.pyplot(p_res["fig"])
+            
+            st.markdown("**Plotting Logic:**")
+            show_code(p_res["code_plot"])

@@ -6,7 +6,7 @@ from logic.ovr_logic import run_normality_test_ovr
 def render_ovr_normality_test_page():
     st.title("📊 One-vs-Rest: Normality Tests")
     
-    # 1. Verificación de datos
+    # --- 1. Data Validation ---
     if "df" not in st.session_state or st.session_state.df is None:
         st.warning("⚠️ No data found. Please upload a file in the 'Upload Dataset' section first.")
         return
@@ -19,12 +19,14 @@ def render_ovr_normality_test_page():
         st.error("The dataset does not contain any numeric columns.")
         return
         
+    # Lightweight check for valid categorical columns (> 2 categories for OVR)
     valid_categorical_cols = [col for col in all_categorical_cols if df[col].nunique() > 2]
     
     if not valid_categorical_cols:
-        st.error("Error: The dataset must contain at least one categorical column with 3 or more categories to perform a One-vs-Rest test.")
+        st.error("Error: The dataset must contain at least one categorical column with 3 or more categories.")
         return
 
+    # --- 2. Test Configuration (UI Inputs) ---
     st.markdown("### Test Setup")
     col1, col2, col3 = st.columns(3)
     
@@ -40,18 +42,48 @@ def render_ovr_normality_test_page():
     available_categories = df[selected_cat].dropna().unique().tolist()
     target_cat = st.selectbox("Select Target Population ('One')", available_categories, key="ovr_norm_target")
     
-    st.caption(f"Testing normality for: **{target_cat}** and **The Rest**")
+    st.caption(f"Testing normality for: **{target_cat}** vs **The Rest**")
+
+    # --- 3. Context ID and Cache Management ---
+    # Create unique ID to detect input changes
+    current_context_id = f"{selected_num}_{selected_cat}_{test_name}_{target_cat}"
+    
+    # Reset page state if the context changed
+    if ("ovr_norm_state" not in st.session_state or 
+        st.session_state.get("ovr_norm_id") != current_context_id):
+        
+        st.session_state.ovr_norm_state = {}  # Isolated results dictionary
+        st.session_state.ovr_norm_id = current_context_id
+
+    state = st.session_state.ovr_norm_state
 
     st.divider()
-    
-    st.subheader(f"Results for {test_name}")
-    results_df, code = run_normality_test_ovr(df, selected_num, selected_cat, target_cat, test_name)    
-    st.dataframe(
-        results_df.style.format({
-            'Statistic': '{:.4f}', 
-            'p-value': '{:.4f}'
-        }), 
-        use_container_width=True,
-        hide_index=True
-    )
-    show_code(code)    
+
+    # --- 4. Granular Execution (On-Demand) ---
+
+    with st.expander(f"Normality Analysis: {test_name}", expanded=not state.get("results")):
+        # Only perform the test logic when the button is clicked
+        if st.button(f"Run {test_name} Analysis", key="btn_run_ovr_norm"):
+            with st.spinner(f"Computing {test_name} for target and rest..."):
+                results_df, code = run_normality_test_ovr(
+                    df, selected_num, selected_cat, target_cat, test_name
+                )
+                
+                # Store results in the state dictionary
+                state["results"] = {"data": results_df, "code": code}
+
+        # Render results if they exist in state
+        if "results" in state:
+            res = state["results"]
+            
+            st.markdown(f"### Results for {test_name}")
+            st.dataframe(
+                res["data"].style.format({
+                    'Statistic': '{:.4f}', 
+                    'p-value': '{:.4f}'
+                }), 
+                use_container_width=True,
+                hide_index=True
+            )
+            
+            show_code(res["code"])
