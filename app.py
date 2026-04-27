@@ -1,5 +1,6 @@
 import streamlit as st
 from gui.load_dataset_page import render_upload_page
+from gui.dtypes_page import render_change_dtype_page
 from gui.normality_page import render_normality_test_page
 from gui.normality_by_group_page import render_normality_test_by_group_page
 from gui.descriptive_stats_page import render_descriptive_numerical_page
@@ -46,6 +47,13 @@ st.sidebar.title("Navigation")
 if st.sidebar.button("Upload Dataset", use_container_width=True):
     change_page("Upload Dataset")
 
+with st.sidebar.expander("Data Transformation", expanded=False):
+    if st.button("Change Data Types", use_container_width=True):
+        change_page('Change Data Types')
+
+    if st.button("Create Categorical Variable", use_container_width=True):
+        change_page("Create Categorical Variable")
+
 with st.sidebar.expander("Descriptive Statistics", expanded=False):
     # Subsección: Variables Numéricas
     if st.button("Numerical Variables", use_container_width=True):
@@ -54,10 +62,6 @@ with st.sidebar.expander("Descriptive Statistics", expanded=False):
     # Subsección: Variables Categóricas (labels a, b, c)
     if st.button("Categorical Variables", use_container_width=True):
         change_page("Descriptive - Categorical")
-
-with st.sidebar.expander("Data Transformation", expanded=False):
-    if st.button("Create Categorical Variable", use_container_width=True):
-        change_page("Create Categorical Variable")
         
 with st.sidebar.expander("Normality Tests", expanded=False):
     if st.button("Whole Sample Normality", use_container_width=True):
@@ -198,3 +202,5 @@ elif page == "About":
 
 elif page == "Create Categorical Variable":
     render_create_categorical_page()
+elif page == "Change Data Types":
+    render_change_dtype_page()

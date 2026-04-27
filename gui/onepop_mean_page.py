@@ -1,7 +1,7 @@
 import streamlit as st
 from logic.basic_code import get_numeric_columns
 from gui.components import show_code
-from logic.onepop_mean_logic import perform_ttest
+from logic.onepop_mean_logic import perform_ttest_with_ci
 
 def render_onepop_mean_page():
     st.title("One Population Mean Test")
@@ -63,7 +63,7 @@ def render_onepop_mean_page():
         # Only perform heavy logic when this specific button is clicked
         if st.button("Run One-Sample T-Test", key="btn_run_ttest"):
             with st.spinner("Computing statistical results..."):
-                res, ci, code = perform_ttest(df, selected_col, popmean, alternative, confidence)
+                res, ci, code = perform_ttest_with_ci(df, selected_col, popmean, alternative, confidence)
                 
                 # Store results in state to survive Streamlit reruns
                 state["analysis"] = {
