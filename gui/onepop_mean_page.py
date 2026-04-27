@@ -1,7 +1,7 @@
 import streamlit as st
 from logic.basic_code import get_numeric_columns
 from gui.components import show_code
-from logic.onepop_mean_logic import perform_ttest_with_ci
+from logic.onepop_mean_median_logic import perform_ttest_with_ci
 
 def render_onepop_mean_page():
     st.title("One Population Mean Test")

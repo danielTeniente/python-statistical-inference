@@ -2,7 +2,7 @@ import streamlit as st
 from logic.basic_code import get_numeric_columns
 from gui.components import show_code
 # Assuming you saved the three new functions in onepop_mean_logic.py
-from logic.onepop_mean_logic import perform_wilcoxon, get_bootstrap_ci, get_exact_median_ci
+from logic.onepop_mean_median_logic import perform_wilcoxon, get_bootstrap_ci, get_exact_median_ci
 
 def render_onepop_median_page():
     st.title("One Population Median Test")
