@@ -16,7 +16,6 @@ def render_independence_test_page():
     
     df = st.session_state.df
 
-    # Lógica ligera para filtrar columnas
     valid_cols = [col for col in df.columns if 2 <= df[col].dropna().nunique() <= 30]
 
     if len(valid_cols) < 2:
@@ -38,29 +37,28 @@ def render_independence_test_page():
         help="Recommended for 2x2 tables."
     )
 
-    # --- 3. Gestión de Identificadores y Estado (Invalidación de Caché) ---
-    # Creamos un ID único basado en las entradas del usuario
+    # --- 3. Gestión de Identificadores y Estado ---
     current_context_id = f"{var1_col}_{var2_col}_{apply_yates}"
     
-    # Si el ID cambió o no existe el diccionario, reiniciamos el estado de esta página
     if ("independence_state" not in st.session_state or 
         st.session_state.get("independence_context_id") != current_context_id):
         
-        st.session_state.independence_state = {} # Diccionario limpio para resultados
+        st.session_state.independence_state = {} 
         st.session_state.independence_context_id = current_context_id
 
-    # Referencia corta al diccionario de resultados
     state = st.session_state.independence_state
 
     st.divider()
 
-    # --- 5. Lógica de Evaluación Perezosa (UI Helper) ---
-    # Calculamos dimensiones mínimas para la UI sin procesar la tabla completa aún
+    # --- 4. Lógica de Evaluación y Límites Matemáticos ---
+    clean_len = len(df[[var1_col, var2_col]].dropna())
     n_unique_v1 = df[var1_col].nunique()
     n_unique_v2 = df[var2_col].nunique()
+    
     is_2x2_ui = (n_unique_v1 == 2 and n_unique_v2 == 2)
+    total_cells = n_unique_v1 * n_unique_v2
 
-    # --- 6. Contenedores de Ejecución Granular ---
+    # --- 5. Contenedores de Ejecución Granular ---
 
     # SECCIÓN: TABLA DE CONTINGENCIA
     with st.expander("📊 1. Contingency Table", expanded=not state.get("table")):
@@ -78,7 +76,7 @@ def render_independence_test_page():
     # SECCIÓN: CHI-SQUARE
     with st.expander("🧪 2. Chi-Square Test", expanded=False):
         if st.button("Run Chi-Square Test", key="btn_chi"):
-            with st.spinner("Computing Pearson statistics..."):
+            with st.spinner("Computing statistics..."):
                 chi2, p, code = perform_chi_square_test(
                     df=df, var1_col=var1_col, var2_col=var2_col, correction=apply_yates
                 )
@@ -93,16 +91,46 @@ def render_independence_test_page():
 
     # SECCIÓN: FISHER'S EXACT TEST
     with st.expander("🧬 3. Fisher's Exact Test", expanded=False):
-        # UI reactiva sin cálculo pesado
-        if is_2x2_ui:
-            st.info("Standard Fisher's Exact Test will be applied (2x2).")
-        else:
-            st.warning(f"Table is {n_unique_v1}x{n_unique_v2}. Monte Carlo simulation will be used.")
+        
+        # Parámetro interactivo de remuestreo (solo visible si no es 2x2)
+        n_resamples = 2000 # Valor por defecto seguro para 2x2
+        if not is_2x2_ui:
+            st.markdown("**Monte Carlo Simulation Settings:**")
+            n_resamples = st.slider(
+                "Number of resamples (n_resamples)", 
+                min_value=500, max_value=20000, value=2000, step=500,
+                help="Higher values increase precision but take longer to compute."
+            )
+            
+        # MATEMÁTICA DE PREVENCIÓN Sincronizada con el input del usuario
+        simulated_table_size = n_resamples * total_cells
+        fisher_blocked = (not is_2x2_ui) and (simulated_table_size <= clean_len)
 
-        if st.button("Run Fisher Test", key="btn_fisher"):
+        # UI Reactiva para Fisher
+        if is_2x2_ui:
+            st.info("Standard Fisher's Exact Test will be applied (2x2 tables calculate exact factorials natively).")
+        else:
+            if fisher_blocked:
+                st.error(
+                    f"❌ **Test Blocked:** The SciPy heuristic failed. Your simulated table size "
+                    f"({n_resamples} resamples × {total_cells} cells = **{simulated_table_size:,}**) "
+                    f"must be strictly greater than your total valid rows (**{clean_len:,}**)."
+                )
+                st.info(
+                    "💡 **How to fix this:** You can try increasing the number of resamples above, "
+                    "or ideally, use the **Chi-Square Test** (above) which is the statistically correct "
+                    "method for large sample sizes."
+                )
+            else:
+                st.success(
+                    f"✅ Simulation valid. Simulated size (**{simulated_table_size:,}**) > Sample size (**{clean_len:,}**)."
+                )
+
+        if st.button("Run Fisher Test", key="btn_fisher", disabled=fisher_blocked):
             with st.spinner("Executing Fisher simulation (this may take a moment)..."):
                 f_stat, f_p, code = perform_fisher_exact_test(
-                    df=df, var1_col=var1_col, var2_col=var2_col, alternative="two-sided"
+                    df=df, var1_col=var1_col, var2_col=var2_col, 
+                    alternative="two-sided", n_resamples=n_resamples
                 )
                 state["fisher"] = {"stat": f_stat, "p": f_p, "code": code}
 

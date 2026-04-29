@@ -22,7 +22,7 @@ def render_upload_page():
         selected_sep_label = st.selectbox("Separator", list(separators.keys()))
         selected_sep = separators[selected_sep_label]
         
-    # 1. LÓGICA DE CARGA: El uploader sigue siempre disponible
+    # --- 1. UPLOAD LOGIC ---
     file = st.file_uploader("Choose a CSV file to upload or replace the current one", type=["csv"])
     
     if file is not None:
@@ -31,15 +31,29 @@ def render_upload_page():
         show_code(code)
 
         if df is not None:
-            # Guardamos el nuevo dataframe en el estado de la sesión
+            # --- CENTRALIZED PROTECTION LIMIT (Undersampling) ---
+            MAX_ROWS = 250000
+            total_rows_original = len(df)
+            
+            if total_rows_original > MAX_ROWS:
+                st.warning(
+                    f"⚠️ **Massive Dataset Detected ({total_rows_original:,} rows).**\n\n"
+                    f"To ensure the application runs smoothly in the cloud and does not crash, "
+                    f"we have taken a representative random sample of {MAX_ROWS:,} rows. "
+                    "The code generated below will work with your full dataset locally."
+                )
+                # Apply undersampling and free memory by reassigning the dataframe
+                df = df.sample(n=MAX_ROWS, random_state=42)
+            
+            # Save the dataframe (possibly sampled) to the session state
             st.session_state.df = df
-            st.success(f"File uploaded successfully! (Encoding: `{used_enc}` | Separator: `{repr(selected_sep)}`)")
+            st.success(f"File loaded successfully! (Encoding: `{used_enc}` | Separator: `{repr(selected_sep)}`)")
         else:
             st.error("There was an error processing the file.")
             st.error(f"Details: {error_msg}")
             st.warning("Try changing the **Separator** or **Encoding** above.")
 
-    # 2. LÓGICA DE VISUALIZACIÓN: Revisamos si ya hay un df en memoria
+    # --- 2. VISUALIZATION LOGIC ---
     if 'df' in st.session_state and st.session_state.df is not None:
         current_df = st.session_state.df
         
@@ -47,13 +61,10 @@ def render_upload_page():
         show_code('df.head()')
         st.dataframe(current_df.head())
         
-        # Mostrar tipos de datos de forma opcional (colapsado por defecto)
         with st.expander("🔍 Show Column Data Types"):
             show_code('df.dtypes')
             
-            # Formateamos los dtypes a un DataFrame limpio para que Streamlit lo renderice bonito
             dtypes_df = current_df.dtypes.astype(str).reset_index()
             dtypes_df.columns = ["Column", "Data Type"]
             
-            # hide_index=True oculta el índice numérico para que se vea más profesional
             st.dataframe(dtypes_df, hide_index=True)

@@ -8,19 +8,26 @@ from logic.association_logic import (
 from logic.independence_logic import get_contingency_table 
 from gui.components import show_code
 
+# --- LÍMITE 1: Caché para evitar recalcular columnas en cada clic ---
+@st.cache_data(show_spinner=False)
+def get_valid_categorical_columns(df):
+    """Retorna columnas que tienen entre 2 y 30 categorías únicas."""
+    return [col for col in df.columns if 2 <= df[col].dropna().nunique() <= 30]
+
 def render_association_measures_page():
     st.title("Measures of Association (Effect Size)")
 
-    # --- Data Validation ---
     if "df" not in st.session_state or st.session_state.df is None:
         st.warning("⚠️ No data found. Please upload a file in the 'Upload Dataset' section first.")
         return
     
     df = st.session_state.df
-    valid_cols = [col for col in df.columns if 2 <= df[col].dropna().nunique() <= 30]
+
+    # Usamos la función cacheada
+    valid_cols = get_valid_categorical_columns(df)
 
     if len(valid_cols) < 2:
-        st.error("The dataset must contain at least two categorical columns.")
+        st.error("The dataset must contain at least two categorical columns (between 2 and 30 categories).")
         return
 
     # --- Variable Selection ---
@@ -32,20 +39,16 @@ def render_association_measures_page():
     with col2:
         var2_col = st.selectbox("Select Variable 2", remaining_cols if remaining_cols else valid_cols, key="assoc_var2")
 
-    # Unique identifier to clear results if variables change
     analysis_id = f"{var1_col}_{var2_col}"
 
-    # Initialize the state for individual results
     if "assoc_state_id" not in st.session_state or st.session_state.assoc_state_id != analysis_id:
         st.session_state.assoc_state_id = analysis_id
-        st.session_state.assoc_results = {}  # We will store each calculation separately here
+        st.session_state.assoc_results = {}  
 
     st.divider()
 
-    # Quick check for 2x2 without building the full table first
-    is_2x2 = (df[var1_col].dropna().nunique() == 2 and df[var2_col].dropna().nunique() == 2)
-
-    # --- Individual Rendering (Lazy Execution) ---
+    # Pre-cálculo seguro para is_2x2 (mucho más rápido usando nunique de Pandas sobre la serie ya cargada)
+    is_2x2 = (df[var1_col].nunique() == 2 and df[var2_col].nunique() == 2)
 
     # 1. Contingency Table
     with st.expander("📊 Contingency Table", expanded=True):
@@ -102,7 +105,13 @@ def render_association_measures_page():
         with st.expander("4. Odds Ratio (OR)", expanded=True):
             if st.button("Calculate Odds Ratio", key="btn_odds"):
                 with st.spinner("Calculating Odds Ratio..."):
-                    st.session_state.assoc_results["odds"] = perform_odds_ratio_test(df, var1_col, var2_col)
+                    # --- LÍMITE 3: Manejo de Excepciones para Ceros ---
+                    try:
+                        st.session_state.assoc_results["odds"] = perform_odds_ratio_test(df, var1_col, var2_col)
+                    except ZeroDivisionError:
+                        st.error("❌ It was not possible to calculate the Odds Ratio due to zero counts in the contingency table. Consider adding a small constant (e.g., 0.5) to all cells or using a different measure.")
+                    except Exception as e:
+                        st.error(f"❌ Error calculating Odds Ratio: {e}")
                     
             if "odds" in st.session_state.assoc_results:
                 val, low, high, p, code = st.session_state.assoc_results["odds"]

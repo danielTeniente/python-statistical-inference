@@ -13,22 +13,10 @@ def get_contingency_table(df, var1_col, var2_col):
     )
     return contingency_table, code
 
-def perform_fisher_exact_test(df, var1_col, var2_col, alternative='two-sided'):
+def perform_fisher_exact_test(df, var1_col, var2_col, alternative='two-sided', n_resamples=2000):
     """
     Perform Fisher's Exact Test.
     Automatically uses Monte Carlo simulation for tables larger than 2x2.
-
-    Parameters:
-    - df: DataFrame containing the data.
-    - var1_col: Column name representing the first categorical variable.
-    - var2_col: Column name representing the second categorical variable.
-    - alternative: Type of test ('two-sided', 'less', 'greater'). 
-                   Note: 'less' and 'greater' are only valid for 2x2 tables.
-
-    Returns:
-    - statistic: The Odds Ratio (only for 2x2 tables) or None (for larger tables).
-    - p_value: The calculated p-value.
-    - code: String containing the Python code to reproduce the test.
     """
     contingency_table = pd.crosstab(df[var1_col], df[var2_col])
     
@@ -50,8 +38,8 @@ def perform_fisher_exact_test(df, var1_col, var2_col, alternative='two-sided'):
         )
         
     else:
-        rng = np.random.default_rng()
-        mc_method = MonteCarloMethod(rng=rng)
+        rng = np.random.default_rng(42) 
+        mc_method = MonteCarloMethod(n_resamples=n_resamples, rng=rng)
         
         result = fisher_exact(contingency_table, method=mc_method)
         p_value = result.pvalue
@@ -61,8 +49,8 @@ def perform_fisher_exact_test(df, var1_col, var2_col, alternative='two-sided'):
             "import numpy as np\n"
             "from scipy.stats import fisher_exact, MonteCarloMethod\n\n"
             f"contingency_table = pd.crosstab(df['{var1_col}'], df['{var2_col}'])\n"
-            "rng = np.random.default_rng()\n"
-            "method = MonteCarloMethod(rng=rng)\n"
+            "rng = np.random.default_rng(42)\n"
+            f"method = MonteCarloMethod(n_resamples={n_resamples}, rng=rng)\n"
             "result = fisher_exact(contingency_table, method=method) # Does not support alternative parameter\n\n"
             "print('Contingency Table:')\n"
             "print(contingency_table)\n"

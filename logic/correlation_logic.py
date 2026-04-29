@@ -4,15 +4,27 @@ import matplotlib.pyplot as plt
 from scipy.stats import pearsonr, spearmanr, kendalltau
 
 # --- Internal Support Function (Backend) ---
-def _bootstrap_ci(x, y, method='spearman', n_boot=5000, alpha=0.05):
-    """Calculates bootstrap confidence intervals for correlation coefficients."""
+def _bootstrap_ci(x, y, method='spearman', n_boot=2000, alpha=0.05, max_bootstrap_n=5000):
+    """Calculates bootstrap confidence intervals with a safety cap for large N."""
     n = len(x)
+    
+    # OPTIMIZATION 1: Cap the data size purely for the permutation test to avoid multi-hour calculations
+    if n > max_bootstrap_n:
+        idx_sample = np.random.choice(range(n), max_bootstrap_n, replace=False)
+        x_boot_source = x[idx_sample]
+        y_boot_source = y[idx_sample]
+        n_boot_source = max_bootstrap_n
+    else:
+        x_boot_source = x
+        y_boot_source = y
+        n_boot_source = n
+
     stats = []
     
     for _ in range(n_boot):
-        idx = np.random.choice(range(n), n, replace=True)
-        xb = x[idx]
-        yb = y[idx]
+        idx = np.random.choice(range(n_boot_source), n_boot_source, replace=True)
+        xb = x_boot_source[idx]
+        yb = y_boot_source[idx]
         
         if method == 'spearman':
             r = spearmanr(xb, yb)[0]
@@ -58,7 +70,7 @@ def perform_pearson_correlation(df, var1_col, var2_col):
     return corr_coeff, p_value, ci_lower, ci_upper, code
 
 # --- 2. Spearman Rank Correlation ---
-def perform_spearman_correlation(df, var1_col, var2_col, n_boot=5000):
+def perform_spearman_correlation(df, var1_col, var2_col, n_boot=2500):
     """Performs Spearman rank correlation and calculates a Bootstrap 95% Confidence Interval."""
     clean_df = df[[var1_col, var2_col]].dropna()
     x = clean_df[var1_col].values
@@ -92,7 +104,7 @@ def perform_spearman_correlation(df, var1_col, var2_col, n_boot=5000):
     return corr_coeff, p_value, ci_lower, ci_upper, code
 
 # --- 3. Kendall Tau Correlation ---
-def perform_kendall_correlation(df, var1_col, var2_col, n_boot=5000):
+def perform_kendall_correlation(df, var1_col, var2_col, n_boot=2500):
     """Performs Kendall Tau correlation test and calculates a Bootstrap 95% Confidence Interval."""
     clean_df = df[[var1_col, var2_col]].dropna()
     x = clean_df[var1_col].values
@@ -126,32 +138,39 @@ def perform_kendall_correlation(df, var1_col, var2_col, n_boot=5000):
     return corr_coeff, p_value, ci_lower, ci_upper, code
 
 def get_scatterplot(df, col_x, col_y, show_line=False):
-    """
-    Generates a scatterplot for two variables with an optional linear regression line.
-    Returns the matplotlib figure and the equivalent Python code as a string.
-    """
-    # Drop NaNs to prevent errors in polyfit and plotting
+    """Generates scatterplot, sampling points for rendering performance while keeping math accurate."""
     clean_df = df[[col_x, col_y]].dropna()
-    x = clean_df[col_x]
-    y = clean_df[col_y]
+    
+    # Calculate the math (line) using FULL dataset
+    x_full = clean_df[col_x]
+    y_full = clean_df[col_y]
+    
+    # OPTIMIZATION 2: Cap scatter rendering to 3,000 points to prevent browser freezing
+    MAX_SCATTER_POINTS = 3000
+    if len(clean_df) > MAX_SCATTER_POINTS:
+        plot_df = clean_df.sample(n=MAX_SCATTER_POINTS, random_state=42)
+    else:
+        plot_df = clean_df
+        
+    x_plot = plot_df[col_x]
+    y_plot = plot_df[col_y]
     
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.scatter(x, y, alpha=0.7, edgecolors='w', linewidth=0.5)
+    ax.scatter(x_plot, y_plot, alpha=0.5, edgecolors='w', linewidth=0.5)
     
     title_text = f'Scatterplot of {col_y} vs {col_x}'
-    
-    # Conditional logic for the regression line
+    if len(clean_df) > MAX_SCATTER_POINTS:
+         title_text += f'\n(Rendered sample of {MAX_SCATTER_POINTS} points)'
+
     if show_line:
-        # Calculate Pearson correlation for the dynamic title
-        r_val, _ = pearsonr(x, y)
-        title_text += f' (r = {r_val:.3f})'
+        r_val, _ = pearsonr(x_full, y_full)
+        title_text += f'\nPearson r = {r_val:.3f}'
         
-        # Linear fit calculation
-        coef = np.polyfit(x, y, 1)
+        coef = np.polyfit(x_full, y_full, 1)
         poly_fn = np.poly1d(coef)
         
-        # Plot the regression line
-        ax.plot(x, poly_fn(x), color='red', linewidth=2, label='Linear Fit')
+        # Plot line across the full range of X
+        ax.plot(x_full, poly_fn(x_full), color='red', linewidth=2, label='Linear Fit')
         ax.legend()
     
     ax.set_title(title_text)
@@ -191,15 +210,12 @@ def get_scatterplot(df, col_x, col_y, show_line=False):
     return fig, code
 
 def get_correlation_heatmap(df, columns, method='pearson', shape='triangle'):
-    """
-    Generates a correlation heatmap for a list of columns.
-    Supports different correlation methods ('pearson', 'spearman', 'kendall')
-    and shapes ('triangle' or 'square'). Returns the figure and reproducible code.
-    """
-    # Filter the DataFrame to include only the selected columns
-    subset_df = df[columns]
+    subset_df = df[columns].dropna()
     
-    # Calculate the correlation matrix
+    # OPTIMIZATION 3: Protect Kendall Tau from freezing on matrix calculations
+    if method == 'kendall' and len(subset_df) > 10000:
+        subset_df = subset_df.sample(n=10000, random_state=42)
+        
     corr_matrix = subset_df.corr(method=method)
     
     fig, ax = plt.subplots(figsize=(10, 8))

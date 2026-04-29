@@ -1,0 +1,2 @@
+[server]
+maxUploadSize = 150 # En Megabytes. Súbelo a 500 o 800 si esperas archivos de 100k+ muy pesados.
