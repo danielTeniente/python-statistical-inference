@@ -4,6 +4,12 @@ from gui.components import show_code
 from logic.basic_code import get_numeric_columns, get_categorical_columns
 from logic.kpop_logic import perform_bartlett, perform_levene
 
+# --- NUEVA OPTIMIZACIÓN: Caché de filtrado ---
+@st.cache_data(show_spinner=False)
+def filter_kpop_variances_data(df, cat_col, selected_cats):
+    """Caches the Pandas filtering operation to avoid repeating it for Bartlett and Levene clicks."""
+    return df[df[cat_col].isin(selected_cats)].copy()
+
 def render_kpop_variances_page():
     st.title("K Population Variances Tests")
     
@@ -20,8 +26,8 @@ def render_kpop_variances_page():
         st.error("The dataset does not contain any numeric columns.")
         return
 
-    # Lightweight filtering for the UI
-    valid_categorical_cols = [col for col in all_categorical_cols if df[col].nunique() >= 3]
+    # Lightweight filtering for the UI (using dropna for accuracy)
+    valid_categorical_cols = [col for col in all_categorical_cols if df[col].dropna().nunique() >= 3]
             
     if not valid_categorical_cols:
         st.error("Error: The dataset must contain at least one categorical column with 3 or more categories.")
@@ -37,10 +43,21 @@ def render_kpop_variances_page():
 
     available_categories = df[selected_cat_col].dropna().unique().tolist()
     
+    # --- LÍMITE FRONTAL: Prevención de Sobrecarga de Arreglos ---
+    MAX_CATEGORIES = 12
+    st.info(
+        f"ℹ️ **Performance Limit:** To ensure calculations remain fast and stable, "
+        f"you can select a maximum of **{MAX_CATEGORIES} categories** to compare at once."
+    )
+
+    # Safe defaults to prevent instant freezing on load
+    default_cats = available_categories[:5] if len(available_categories) >= 5 else available_categories
+
     selected_categories = st.multiselect(
         "Select the specific categories to compare:", 
         available_categories, 
-        default=available_categories,
+        default=default_cats,
+        max_selections=MAX_CATEGORIES, # The hard limit enforced by Streamlit
         key="kpop_categories"
     )
 
@@ -70,8 +87,8 @@ def render_kpop_variances_page():
     with st.expander("Bartlett's Test for Equal Variances", expanded=not state.get("bartlett")):
         if st.button("Run Bartlett's Test", key="btn_bartlett"):
             with st.spinner("Calculating Bartlett statistic..."):
-                # Filtering logic is deferred until execution
-                filtered_df = df[df[selected_cat_col].isin(selected_categories)].copy()
+                # Call cached filtering function
+                filtered_df = filter_kpop_variances_data(df, selected_cat_col, selected_categories)
                 stat, p_val, code = perform_bartlett(filtered_df, selected_num_col, selected_cat_col)
                 state["bartlett"] = {"stat": stat, "p": p_val, "code": code}
 
@@ -86,7 +103,8 @@ def render_kpop_variances_page():
     with st.expander("Levene's Test for Equal Variances", expanded=False):
         if st.button("Run Levene's Test", key="btn_levene"):
             with st.spinner("Calculating Levene statistic..."):
-                filtered_df = df[df[selected_cat_col].isin(selected_categories)].copy()
+                # Call cached filtering function
+                filtered_df = filter_kpop_variances_data(df, selected_cat_col, selected_categories)
                 stat_l, p_val_l, code_l = perform_levene(filtered_df, selected_num_col, selected_cat_col)
                 state["levene"] = {"stat": stat_l, "p": p_val_l, "code": code_l}
 

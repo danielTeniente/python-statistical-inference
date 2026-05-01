@@ -8,6 +8,12 @@ from logic.kpop_logic import (
     perform_pairwise_gameshowell
 )
 
+# --- NUEVA OPTIMIZACIÓN: Caché de filtrado ---
+@st.cache_data(show_spinner=False)
+def filter_kpop_means_data(df, cat_col, selected_cats):
+    """Caches the heavy Pandas filtering operation to avoid repeating it on multiple button clicks."""
+    return df[df[cat_col].isin(selected_cats)].copy()
+
 def render_kpop_means_page():
     st.title("k-Sample Mean Tests")
     
@@ -25,7 +31,7 @@ def render_kpop_means_page():
         return
     
     # Lightweight logic to find valid categories
-    valid_categorical_cols = [col for col in all_categorical_cols if df[col].nunique() >= 3]
+    valid_categorical_cols = [col for col in all_categorical_cols if df[col].dropna().nunique() >= 3]
             
     if not valid_categorical_cols:
         st.error("Error: The dataset must contain at least one categorical column with 3 or more categories.")
@@ -41,10 +47,21 @@ def render_kpop_means_page():
 
     available_categories = df[selected_cat_col].dropna().unique().tolist()
 
+    # --- LÍMITE FRONTAL: Prevención de Explosión Combinatoria ---
+    MAX_CATEGORIES = 12
+    st.info(
+        f"ℹ️ **Rendering Limit:** To prevent the visualization from freezing your browser, "
+        f"you can select a maximum of **{MAX_CATEGORIES} categories** for comparison."
+    )
+
+    # Safe default (max 5) to prevent instant freezing on load
+    default_cats = available_categories[:5] if len(available_categories) >= 5 else available_categories
+
     selected_categories = st.multiselect(
         "Select the specific categories to compare:", 
         available_categories, 
-        default=available_categories,
+        default=default_cats,
+        max_selections=MAX_CATEGORIES, # Hard limit enforced by Streamlit
         key="kpop_categories"
     )
 
@@ -78,8 +95,8 @@ def render_kpop_means_page():
     with st.expander("One-way ANOVA for Equality of Means", expanded=not state.get("anova")):
         if st.button("Calculate ANOVA", key="btn_anova"):
             with st.spinner("Computing ANOVA..."):
-                # Lazy filtering only when calculation is requested
-                filtered_df = df[df[selected_cat_col].isin(selected_categories)].copy()
+                # Call cached filtering function
+                filtered_df = filter_kpop_means_data(df, selected_cat_col, selected_categories)
                 stat, p_value, code = perform_oneway_anova(filtered_df, selected_num_col, selected_cat_col)
                 state["anova"] = {"stat": stat, "p": p_value, "code": code}
         
@@ -101,7 +118,8 @@ def render_kpop_means_page():
 
         if st.button("Run Post-hoc Comparison", key="btn_posthoc"):
             with st.spinner("Performing pairwise comparisons..."):
-                filtered_df = df[df[selected_cat_col].isin(selected_categories)].copy()
+                # Call cached filtering function
+                filtered_df = filter_kpop_means_data(df, selected_cat_col, selected_categories)
                 
                 if equal_var:
                     res_stat, fig, code = perform_pairwise_tukeyhsd(filtered_df, selected_num_col, selected_cat_col, confidence)
