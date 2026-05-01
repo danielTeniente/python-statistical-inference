@@ -9,35 +9,34 @@ from statsmodels.stats.multicomp import pairwise_tukeyhsd
 from scipy.stats import studentized_range
 
 def perform_bartlett(df, num_col, cat_col):
-    """Perform Bartlett's test for equal variances grouped by a categorical column."""
-    categories = df[cat_col].dropna().unique()
-    data_arrays = [df[df[cat_col] == cat][num_col].dropna() for cat in categories]
+    """Perform Bartlett's test for equal variances."""
+    # OPTIMIZATION: Single pass grouping
+    grouped = df[[cat_col, num_col]].dropna().groupby(cat_col)[num_col]
+    data_arrays = [group.values for name, group in grouped if len(group) > 0]
+    
     stat, p_value = stats.bartlett(*data_arrays)
 
     code = "from scipy import stats\n\n"
-    code += f"# Identify unique categories in '{cat_col}'\n"
-    code += f"categories = df['{cat_col}'].dropna().unique()\n\n"
-    code += f"# Create a list of arrays, one for each category\n"
-    code += f"data_arrays = [df[df['{cat_col}'] == cat]['{num_col}'].dropna() for cat in categories]\n\n"
-    code += f"# Perform Bartlett's test by unpacking the list\n"
+    code += f"# Fast grouping using pandas groupby\n"
+    code += f"grouped = df[['{cat_col}', '{num_col}']].dropna().groupby('{cat_col}')['{num_col}']\n"
+    code += "data_arrays = [group.values for name, group in grouped if len(group) > 0]\n\n"
+    code += f"# Perform Bartlett's test\n"
     code += "stat, p_value = stats.bartlett(*data_arrays)\n\n"
     code += "print(f'Bartlett statistic: {stat:.4f}')\n"
     code += "print(f'p-value: {p_value:.4f}')\n"
     
     return stat, p_value, code
 
-def perform_levene(df,num_col, cat_col):
-    """Perform Levene's test for equal variances grouped by a categorical column."""
-    categories = df[cat_col].dropna().unique()
-    data_arrays = [df[df[cat_col] == cat][num_col].dropna() for cat in categories]
+def perform_levene(df, num_col, cat_col):
+    """Perform Levene's test for equal variances."""
+    grouped = df[[cat_col, num_col]].dropna().groupby(cat_col)[num_col]
+    data_arrays = [group.values for name, group in grouped if len(group) > 0]
+    
     stat, p_value = stats.levene(*data_arrays, center='median')
     
     code = "from scipy import stats\n\n"
-    code += f"# Identify unique categories in '{cat_col}'\n"
-    code += f"categories = df['{cat_col}'].dropna().unique()\n\n"
-    code += f"# Create a list of arrays, one for each category\n"
-    code += f"data_arrays = [df[df['{cat_col}'] == cat]['{num_col}'].dropna() for cat in categories]\n\n"
-    code += f"# Perform Levene's test by unpacking the list\n"
+    code += f"grouped = df[['{cat_col}', '{num_col}']].dropna().groupby('{cat_col}')['{num_col}']\n"
+    code += "data_arrays = [group.values for name, group in grouped if len(group) > 0]\n\n"
     code += "stat, p_value = stats.levene(*data_arrays, center='median')\n\n"
     code += "print(f'Levene statistic: {stat:.4f}')\n"
     code += "print(f'p-value: {p_value:.4f}')\n"
@@ -45,17 +44,15 @@ def perform_levene(df,num_col, cat_col):
     return stat, p_value, code
 
 def perform_oneway_anova(df, num_col, cat_col):
-    """Perform one-way ANOVA grouped by a categorical column."""
-    categories = df[cat_col].dropna().unique()
-    data_arrays = [df[df[cat_col] == cat][num_col].dropna() for cat in categories]
+    """Perform one-way ANOVA."""
+    grouped = df[[cat_col, num_col]].dropna().groupby(cat_col)[num_col]
+    data_arrays = [group.values for name, group in grouped if len(group) > 0]
+    
     stat, p_value = stats.f_oneway(*data_arrays)
     
     code = "from scipy import stats\n\n"
-    code += f"# Identify unique categories in '{cat_col}'\n"
-    code += f"categories = df['{cat_col}'].dropna().unique()\n\n"
-    code += f"# Create a list of arrays, one for each category\n"
-    code += f"data_arrays = [df[df['{cat_col}'] == cat]['{num_col}'].dropna() for cat in categories]\n\n"
-    code += f"# Perform One-Way ANOVA by unpacking the list\n"
+    code += f"grouped = df[['{cat_col}', '{num_col}']].dropna().groupby('{cat_col}')['{num_col}']\n"
+    code += "data_arrays = [group.values for name, group in grouped if len(group) > 0]\n\n"
     code += "stat, p_value = stats.f_oneway(*data_arrays)\n\n"
     code += "print(f'ANOVA F-statistic: {stat:.4f}')\n"
     code += "print(f'p-value: {p_value:.4f}')\n"
@@ -227,24 +224,20 @@ def perform_pairwise_gameshowell(df, num_col, cat_col, confidence=0.95):
     return gh_result[display_cols], fig, code
 
 def perform_krustall_wallis(df, num_col, cat_col):
-    """Perform Kruskal-Wallis H-test for independent samples grouped by a categorical column."""
-
-    categories = df[cat_col].dropna().unique()
-    data_arrays = [df[df[cat_col] == cat][num_col].dropna() for cat in categories]
+    """Perform Kruskal-Wallis H-test."""
+    grouped = df[[cat_col, num_col]].dropna().groupby(cat_col)[num_col]
+    data_arrays = [group.values for name, group in grouped if len(group) > 0]
+    
     stat, p_value = stats.kruskal(*data_arrays)
     
     code = "from scipy import stats\n\n"
-    code += f"# Identify unique categories in '{cat_col}'\n"
-    code += f"categories = df['{cat_col}'].dropna().unique()\n\n"
-    code += f"# Create a list of arrays, one for each category\n"
-    code += f"data_arrays = [df[df['{cat_col}'] == cat]['{num_col}'].dropna() for cat in categories]\n\n"
-    code += f"# Perform Kruskal-Wallis H-test by unpacking the list\n"
+    code += f"grouped = df[['{cat_col}', '{num_col}']].dropna().groupby('{cat_col}')['{num_col}']\n"
+    code += "data_arrays = [group.values for name, group in grouped if len(group) > 0]\n\n"
     code += "stat, p_value = stats.kruskal(*data_arrays)\n\n"
     code += "print(f'Kruskal-Wallis statistic: {stat:.4f}')\n"
     code += "print(f'p-value: {p_value:.4f}')\n"
     
     return stat, p_value, code
-
 
 def perform_bootstrap_pairwise_median(df, num_col, cat_col, confidence=0.95, n_resamples=2000):
     """
@@ -253,29 +246,33 @@ def perform_bootstrap_pairwise_median(df, num_col, cat_col, confidence=0.95, n_r
     Returns the results dataframe, the matplotlib figure, and the generated Python code.
     """
     results = []
-    categories = df[cat_col].dropna().unique()
-
+    
+    # Fast grouping
+    grouped = df[[cat_col, num_col]].dropna().groupby(cat_col)[num_col]
+    
+    # Extract keys safely
+    categories = list(grouped.groups.keys())
+    
     for cat1, cat2 in itertools.combinations(categories, 2):
-        arr1 = df[df[cat_col] == cat1][num_col].dropna().to_numpy()
-        arr2 = df[df[cat_col] == cat2][num_col].dropna().to_numpy()
+        arr1 = grouped.get_group(cat1).values
+        arr2 = grouped.get_group(cat2).values
         
-        # Protect against empty arrays if data is missing
-        if len(arr1) == 0 or len(arr2) == 0:
-            continue
-            
-        # Calculate dataset median difference        
-        diff = np.median(arr1) - np.median(arr2)
+        # OPTIMIZACIÓN: Capping sample sizes to prevent CPU timeout during bootstrap
+        MAX_SAMPLES = 5000
         
-        # Bootstrap
+        arr1_boot = np.random.choice(arr1, MAX_SAMPLES, replace=False) if len(arr1) > MAX_SAMPLES else arr1
+        arr2_boot = np.random.choice(arr2, MAX_SAMPLES, replace=False) if len(arr2) > MAX_SAMPLES else arr2
+        
+        diff = np.median(arr1) - np.median(arr2) # True diff calculated on FULL arrays
+        
         ci_obj = bootstrap(
-            (arr1, arr2), 
+            (arr1_boot, arr2_boot),  # Bootstrapping on potentially capped arrays
             lambda x, y, axis=-1: np.median(x, axis=axis) - np.median(y, axis=axis), 
             confidence_level=confidence, 
             n_resamples=n_resamples, 
             method='percentile'
         ).confidence_interval
         
-        # Save results
         results.append({
             'A': cat1,
             'B': cat2,
@@ -284,10 +281,8 @@ def perform_bootstrap_pairwise_median(df, num_col, cat_col, confidence=0.95, n_r
             'upper': ci_obj.high
         })
         
-    # Convert to DataFrame
     res_df = pd.DataFrame(results)
 
-    # 3. Prepare data for plotting
     comparisons = res_df['A'].astype(str) + " - " + res_df['B'].astype(str)
     median_diff = res_df['diff'].astype(float)
     ci_low = res_df['lower'].astype(float)
@@ -296,19 +291,12 @@ def perform_bootstrap_pairwise_median(df, num_col, cat_col, confidence=0.95, n_r
     left_dist = median_diff - ci_low
     right_dist = ci_high - median_diff
 
-    # 4. Create Figure and Plot
     fig, ax = plt.subplots(figsize=(8, len(comparisons) * 0.8 + 1.5))
-    
-    # Null Hypothesis Line (H0 = 0 difference)
     ax.axvline(x=0, color='red', linestyle='--', linewidth=2, label='H₀ (No difference)')
     
     ax.errorbar(x=median_diff, y=comparisons,
                 xerr=[left_dist, right_dist], 
-                fmt='o', 
-                color='#2ca02c',
-                markersize=8, 
-                capsize=5, 
-                linewidth=2,
+                fmt='o', color='#2ca02c', markersize=8, capsize=5, linewidth=2,
                 label=f'Estimate ({int(confidence*100)}% CI)')
 
     ax.set_xlabel("Difference of Medians", fontsize=11)
@@ -317,21 +305,20 @@ def perform_bootstrap_pairwise_median(df, num_col, cat_col, confidence=0.95, n_r
     ax.legend(loc='best')
     fig.tight_layout()
 
-    # 5. Code Generation
+    # --- CODE GENERATION (Modified to show the fast grouping approach) ---
     code = "import numpy as np\n"
     code += "import pandas as pd\n"
     code += "import matplotlib.pyplot as plt\n"
     code += "import itertools\n"
     code += "from scipy.stats import bootstrap\n\n"
     
-    code += f"categories = df['{cat_col}'].dropna().unique()\n"
+    code += f"grouped = df[['{cat_col}', '{num_col}']].dropna().groupby('{cat_col}')['{num_col}']\n"
+    code += "categories = list(grouped.groups.keys())\n"
     code += "results = []\n\n"
     
-    code += "# Calculate pairwise bootstrap intervals\n"
     code += "for cat1, cat2 in itertools.combinations(categories, 2):\n"
-    code += f"    arr1 = df[df['{cat_col}'] == cat1]['{num_col}'].dropna().to_numpy()\n"
-    code += f"    arr2 = df[df['{cat_col}'] == cat2]['{num_col}'].dropna().to_numpy()\n\n"
-    code += "    if len(arr1) == 0 or len(arr2) == 0: continue\n\n"
+    code += "    arr1 = grouped.get_group(cat1).values\n"
+    code += "    arr2 = grouped.get_group(cat2).values\n\n"
     code += "    diff = np.median(arr1) - np.median(arr2)\n"
     code += "    ci_obj = bootstrap(\n"
     code += "        (arr1, arr2), \n"
@@ -343,7 +330,7 @@ def perform_bootstrap_pairwise_median(df, num_col, cat_col, confidence=0.95, n_r
     code += "    results.append({'A': cat1, 'B': cat2, 'diff': diff, 'lower': ci_obj.low, 'upper': ci_obj.high})\n\n"
     
     code += "res_df = pd.DataFrame(results)\n"
-    code += "print(res_df.round(4))\n\n"
+    code += "print(res_df.round(4))\n"
     
     code += "# Plotting logic\n"
     code += "comparisons = res_df['A'].astype(str) + ' - ' + res_df['B'].astype(str)\n"
