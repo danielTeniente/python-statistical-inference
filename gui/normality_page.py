@@ -28,7 +28,7 @@ def render_normality_test_page():
             ["Shapiro–Wilk", "D’Agostino–Pearson", 
              "Kolmogorov–Smirnov", "Anderson-Darling"], key="norm_sel_test")
 
-    # --- 3. Context ID and Cache Management ---
+    # --- 3. Context ID and State Management ---
     # Create a unique ID for the current selection
     current_context_id = f"{selected_col}_{test_name}"
 
@@ -50,11 +50,17 @@ def render_normality_test_page():
     with st.expander(f"Statistical Test: {test_name}", expanded=not state.get("stats")):
         if st.button("Run Statistical Test", key="btn_run_stats"):
             with st.spinner("Computing test statistics..."):
-                stat, p, code = run_normality_test(df, selected_col, test_name)
-                state["stats"] = {"stat": stat, "p": p, "code": code}
+                # Unpacking the 4 variables, including the sampled_flag
+                stat, p, code, is_sampled = run_normality_test(df, selected_col, test_name)
+                state["stats"] = {"stat": stat, "p": p, "code": code, "is_sampled": is_sampled}
 
         if "stats" in state:
             res = state["stats"]
+            
+            # Rule 3: Transparency regarding Undersampling
+            if res.get("is_sampled"):
+                st.info("ℹ️ **Note:** Due to statistical constraints and cloud performance limits for large datasets, the data was randomly sampled to 5,000 rows. The generated code below reflects this process.")
+                
             res_c1, res_c2 = st.columns(2)
             res_c1.metric("Statistic", f"{res['stat']:.4f}")
             res_c2.metric("p-value", f"{res['p']:.4f}")
@@ -64,10 +70,16 @@ def render_normality_test_page():
     with st.expander("Visual Analysis (QQ-Plot)", expanded=False):
         if st.button("Generate QQ-Plot", key="btn_run_qq"):
             with st.spinner("Generating plot..."):
-                fig, qq_code = get_qqplot(df, selected_col)
-                state["qq_plot"] = {"fig": fig, "code": qq_code}
+                # Unpacking the 3 variables, including the sampled_flag
+                fig, qq_code, is_sampled = get_qqplot(df, selected_col)
+                state["qq_plot"] = {"fig": fig, "code": qq_code, "is_sampled": is_sampled}
 
         if "qq_plot" in state:
             res_qq = state["qq_plot"]
+            
+            # Rule 3: Transparency regarding Undersampling for plotting
+            if res_qq.get("is_sampled"):
+                st.info("ℹ️ **Note:** To prevent browser memory overload during rendering, the data was randomly sampled to 5,000 points. The generated code includes this step.")
+                
             st.pyplot(res_qq["fig"])
             show_code(res_qq["code"])

@@ -3,6 +3,12 @@ from gui.components import show_code
 from logic.basic_code import get_numeric_columns, get_categorical_columns   
 from logic.normality_page_logic import run_normality_test_by_group
 
+# Rule 4: Cache the filtering process to avoid re-scanning massive datasets
+@st.cache_data(show_spinner=False)
+def filter_dataframe_by_categories(df, cat_col, selected_cats):
+    """Efficiently filters the dataframe and caches the result."""
+    return df[df[cat_col].isin(selected_cats)].copy()
+
 def render_normality_test_by_group_page():
     st.title("📊 Normality Tests by Group")
     
@@ -37,10 +43,12 @@ def render_normality_test_by_group_page():
              
     available_categories = df[selected_cat].dropna().unique().tolist()
     
+    # Rule 2: Limit max_selections to prevent combinatorial explosion / OOM errors
     selected_categories = st.multiselect(
-        "Select populations to test (minimum 1 required):",
+        "Select populations to test (maximum 15 allowed):",
         available_categories,
-        default=available_categories,
+        default=available_categories[:15], # Safe default limit
+        max_selections=15, 
         key="norm_populations"
     )
     
@@ -69,21 +77,33 @@ def render_normality_test_by_group_page():
         # Button to trigger the calculation
         if st.button(f"Run {test_name} Test", key="btn_run_normality"):
             with st.spinner(f"Performing {test_name} for selected groups..."):
-                # Lazy filtering: only performed when the button is clicked
-                filtered_df = df[df[selected_cat].isin(selected_categories)].copy()
                 
-                results_df, code = run_normality_test_by_group(
+                # Rule 4 implemented: Using the cached filtering function
+                filtered_df = filter_dataframe_by_categories(df, selected_cat, selected_categories)
+                
+                # Unpacking the 3 variables, including is_sampled
+                results_df, code, is_sampled = run_normality_test_by_group(
                     filtered_df, selected_num, selected_cat, test_name
                 )
                 
+                # Rule 5: Inject filtering step into the educational code snippet
+                filter_code = "# First, filter the dataset for the selected populations\n"
+                filter_code += f"selected_pops = {selected_categories}\n"
+                filter_code += f"df = df[df['{selected_cat}'].isin(selected_pops)]\n\n"
+                final_code = filter_code + code
+                
                 # Store results in the isolated state dictionary
-                state["results"] = {"data": results_df, "code": code}
+                state["results"] = {"data": results_df, "code": final_code, "is_sampled": is_sampled}
 
         # Render results if they exist in state (persists across reruns)
         if "results" in state:
             res = state["results"]
             
             st.markdown(f"### Statistical Results ({test_name})")
+            
+            # Rule 3: Transparency regarding Undersampling by group
+            if res.get("is_sampled"):
+                st.info("ℹ️ **Note:** Due to statistical constraints and performance limits for large datasets, groups exceeding 5,000 rows were randomly sampled. The provided code reflects this adjustment.")
             
             st.dataframe(
                 res["data"].style.format({
