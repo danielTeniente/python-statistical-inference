@@ -7,17 +7,10 @@ from logic.proportions_logic import (
 )
 from gui.components import show_code
 
-def render_oneprop_test_page():
-    st.title("One Proportion Test")
-
-    # --- 1. Data Validation ---
-    if "df" not in st.session_state or st.session_state.df is None:
-        st.warning("⚠️ No data found. Please upload a file in the 'Upload Dataset' section first.")
-        return
-    
-    df = st.session_state.df
-
-    # --- 2. Lightweight Variable Filtering (Lazy UI Logic) ---
+# --- HELPER FUNCTIONS CON CACHÉ ---
+@st.cache_data(show_spinner=False)
+def get_valid_binary_columns(df):
+    """Escanea el DataFrame una sola vez para encontrar columnas binarias válidas."""
     valid_cols = []
     for col in df.columns:
         if df[col].isnull().all():
@@ -30,6 +23,29 @@ def render_oneprop_test_page():
             unique_vals = df[col].dropna().unique()
             if set(unique_vals).issubset({0, 1, 0.0, 1.0}):
                 valid_cols.append(col)
+    return valid_cols
+
+@st.cache_data(show_spinner=False)
+def get_column_metadata(df, col):
+    """Extrae los valores únicos y tipo de dato de una columna específica cacheando el resultado."""
+    unique_vals = df[col].dropna().unique()
+    is_numeric = pd.api.types.is_numeric_dtype(df[col])
+    is_0_1_only = set(unique_vals).issubset({0, 1, 0.0, 1.0})
+    return unique_vals, is_numeric, is_0_1_only
+
+
+def render_oneprop_test_page():
+    st.title("One Proportion Test")
+
+    # --- 1. Data Validation ---
+    if "df" not in st.session_state or st.session_state.df is None:
+        st.warning("⚠️ No data found. Please upload a file in the 'Upload Dataset' section first.")
+        return
+    
+    df = st.session_state.df
+
+    # --- 2. Lightweight Variable Filtering (Cached) ---
+    valid_cols = get_valid_binary_columns(df)
 
     if not valid_cols:
         st.error("The dataset does not contain any valid binary columns (0/1 or exactly two categories).")
@@ -47,10 +63,8 @@ def render_oneprop_test_page():
             key="one_prop_p0"
         )
     
-    # Logic for Success Term
-    unique_vals = df[selected_col].dropna().unique()
-    is_numeric = pd.api.types.is_numeric_dtype(df[selected_col])
-    is_0_1_only = set(unique_vals).issubset({0, 1, 0.0, 1.0})
+    # Logic for Success Term (Cached)
+    unique_vals, is_numeric, is_0_1_only = get_column_metadata(df, selected_col)
     
     success_term = None
     with col_ui2:
@@ -65,14 +79,12 @@ def render_oneprop_test_page():
     confidence = st.slider("Confidence level", 0.80, 0.99, 0.95, 0.01, key="one_prop_conf")
 
     # --- 4. Context ID and State Management ---
-    # Generate unique ID to detect input changes
     current_context_id = f"{selected_col}_{p0}_{alternative}_{confidence}_{success_term}"
     
-    # Invalidate results if parameters changed
     if ("oneprop_state" not in st.session_state or 
         st.session_state.get("oneprop_context_id") != current_context_id):
         
-        st.session_state.oneprop_state = {}  # Isolated results dictionary
+        st.session_state.oneprop_state = {}  
         st.session_state.oneprop_context_id = current_context_id
 
     state = st.session_state.oneprop_state
@@ -83,6 +95,7 @@ def render_oneprop_test_page():
 
     # SECTION: Binomial Test
     with st.expander("Binomial Test (Exact)", expanded=not state.get("binomial")):
+        st.markdown("*Use this exact test for small sample sizes or extreme proportions.*")
         if st.button("Run Binomial Test", key="btn_run_binomial"):
             with st.spinner("Computing exact binomial probabilities..."):
                 stat, p_val, code = perform_one_proportion_binomial_test(
@@ -100,6 +113,16 @@ def render_oneprop_test_page():
 
     # SECTION: Z-Test
     with st.expander("Z-Test (Normal Approximation)", expanded=False):
+        # Validación Didáctica de Suposiciones
+        n = len(df[selected_col].dropna())
+        exp_successes = n * p0
+        exp_failures = n * (1 - p0)
+        
+        if exp_successes < 10 or exp_failures < 10:
+            st.warning(f"🎓 **Assumption Alert:** Expected successes ({exp_successes:.1f}) or failures ({exp_failures:.1f}) are below 10. The normal approximation may be inaccurate. The **Binomial Test** is recommended.")
+        else:
+            st.success(f"✔️ **Assumption Met:** Expected counts ($np_0$ = {exp_successes:.1f}, $n(1-p_0)$ = {exp_failures:.1f}) are $\\ge 10$.")
+
         if st.button("Run Z-Test", key="btn_run_ztest"):
             with st.spinner("Computing Z-statistic..."):
                 stat, p_val, code = perform_one_proportion_ztest(

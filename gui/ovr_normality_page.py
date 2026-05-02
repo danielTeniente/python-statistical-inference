@@ -3,6 +3,17 @@ from gui.components import show_code
 from logic.basic_code import get_numeric_columns, get_categorical_columns   
 from logic.ovr_logic import run_normality_test_ovr
 
+# --- Rule 4: Cache heavy DataFrame scans for UI elements ---
+@st.cache_data(show_spinner=False)
+def get_valid_ovr_categoricals(df, categorical_cols):
+    """Caches the identification of columns with >2 categories to avoid lag."""
+    return [col for col in categorical_cols if df[col].nunique() > 2]
+
+@st.cache_data(show_spinner=False)
+def get_unique_categories(df, cat_col):
+    """Caches the unique categories extraction."""
+    return df[cat_col].dropna().unique().tolist()
+
 def render_ovr_normality_test_page():
     st.title("📊 One-vs-Rest: Normality Tests")
     
@@ -19,8 +30,8 @@ def render_ovr_normality_test_page():
         st.error("The dataset does not contain any numeric columns.")
         return
         
-    # Lightweight check for valid categorical columns (> 2 categories for OVR)
-    valid_categorical_cols = [col for col in all_categorical_cols if df[col].nunique() > 2]
+    # Lightweight check using cached function
+    valid_categorical_cols = get_valid_ovr_categoricals(df, all_categorical_cols)
     
     if not valid_categorical_cols:
         st.error("Error: The dataset must contain at least one categorical column with 3 or more categories.")
@@ -39,7 +50,8 @@ def render_ovr_normality_test_page():
             ["Shapiro–Wilk", "D’Agostino–Pearson", 
              "Kolmogorov–Smirnov", "Anderson-Darling"], key="ovr_norm_test")
              
-    available_categories = df[selected_cat].dropna().unique().tolist()
+    # Use cached function for unique categories
+    available_categories = get_unique_categories(df, selected_cat)
     target_cat = st.selectbox("Select Target Population ('One')", available_categories, key="ovr_norm_target")
     
     st.caption(f"Testing normality for: **{target_cat}** vs **The Rest**")
@@ -65,18 +77,25 @@ def render_ovr_normality_test_page():
         # Only perform the test logic when the button is clicked
         if st.button(f"Run {test_name} Analysis", key="btn_run_ovr_norm"):
             with st.spinner(f"Computing {test_name} for target and rest..."):
-                results_df, code = run_normality_test_ovr(
+                
+                # Unpacking the 3 variables returned by the optimized backend
+                results_df, code, is_sampled = run_normality_test_ovr(
                     df, selected_num, selected_cat, target_cat, test_name
                 )
                 
                 # Store results in the state dictionary
-                state["results"] = {"data": results_df, "code": code}
+                state["results"] = {"data": results_df, "code": code, "is_sampled": is_sampled}
 
         # Render results if they exist in state
         if "results" in state:
             res = state["results"]
             
             st.markdown(f"### Results for {test_name}")
+            
+            # Rule 3: Transparency regarding Undersampling (Specifically for Shapiro-Wilk)
+            if res.get("is_sampled"):
+                st.info("ℹ️ **Note:** The Shapiro-Wilk test is mathematically constrained and loses accuracy with large datasets (N > 5000). To ensure test validity and prevent cloud memory issues, the data was randomly sampled. The generated code reflects this adjustment.")
+                
             st.dataframe(
                 res["data"].style.format({
                     'Statistic': '{:.4f}', 

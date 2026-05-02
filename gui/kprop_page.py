@@ -1,6 +1,26 @@
 import streamlit as st
+import pandas as pd
 from logic.independence_logic import perform_chi_square_test, get_contingency_table
 from gui.components import show_code
+
+# --- HELPER FUNCTIONS CON CACHÉ ---
+@st.cache_data(show_spinner=False)
+def get_categorical_columns(df):
+    """Escanea el DataFrame una sola vez para encontrar columnas con 2 a 30 categorías."""
+    valid_cols = []
+    for col in df.columns:
+        if df[col].isnull().all():
+            continue
+        # dropna=True evita contar los nulos como una categoría válida
+        if 2 <= df[col].nunique(dropna=True) <= 30:
+            valid_cols.append(col)
+    return valid_cols
+
+@st.cache_data(show_spinner=False)
+def get_unique_counts(df, col1, col2):
+    """Obtiene rápidamente la cantidad de categorías para definir la forma de la tabla."""
+    return df[col1].nunique(dropna=True), df[col2].nunique(dropna=True)
+
 
 def render_kprop_test_page():
     st.title("K Proportions Test (Chi-Square)")
@@ -12,14 +32,15 @@ def render_kprop_test_page():
     
     df = st.session_state.df
 
-    # Lightweight filtering for UI selection
-    valid_cols = [col for col in df.columns if 2 <= df[col].dropna().nunique() <= 30]
+    # --- 2. Lightweight Variable Filtering (Cached) ---
+    valid_cols = get_categorical_columns(df)
 
     if len(valid_cols) < 2:
-        st.error("The dataset must contain at least two categorical columns to perform this test.")
+        st.error("The dataset must contain at least two categorical columns (2 to 30 categories) to perform this test.")
         return
 
-    # --- 2. Variable Selection ---
+    # --- 3. Variable Selection ---
+    st.markdown("### Configuration")
     col1, col2 = st.columns(2)
     
     with col1:
@@ -44,29 +65,30 @@ def render_kprop_test_page():
         st.warning("⚠️ Grouping variable and Outcome variable should be different.")
         return
 
-    apply_yates = st.checkbox(
-        "Apply Yates' Continuity Correction", 
-        value=True, 
-        key="kprop_yates"
-    )
+    # Didáctica: Verificar si la tabla es 2x2 para la corrección de Yates
+    k_groups, k_outcomes = get_unique_counts(df, group_col, outcome_col)
+    is_2x2 = (k_groups == 2 and k_outcomes == 2)
 
-    # --- 3. Context ID and State Management ---
-    # Create unique ID for the current selection
+    if is_2x2:
+        apply_yates = st.checkbox("Apply Yates' Continuity Correction", value=True, key="kprop_yates")
+    else:
+        apply_yates = False
+        st.info(f"💡 **Didactic Note:** Yates' Continuity Correction is mathematically designed only for 2x2 tables. Your selected variables form a **{k_groups}x{k_outcomes}** table, so standard Chi-Square will be used.")
+
+    # --- 4. Context ID and State Management ---
     current_context_id = f"{group_col}_{outcome_col}_{apply_yates}"
 
-    # Reset results if the input parameters change
     if ("kprop_state" not in st.session_state or 
         st.session_state.get("kprop_context_id") != current_context_id):
         
-        st.session_state.kprop_state = {}  # Isolated state dictionary
+        st.session_state.kprop_state = {}  
         st.session_state.kprop_context_id = current_context_id
 
-    # Reference to the isolated state
     state = st.session_state.kprop_state
 
     st.divider()
 
-    # --- 4. Granular Execution (On-Demand) ---
+    # --- 5. Granular Execution (On-Demand) ---
 
     # SECTION: Contingency Table
     with st.expander("📊 1. Contingency Table", expanded=not state.get("table")):
@@ -83,6 +105,8 @@ def render_kprop_test_page():
 
     # SECTION: Chi-Square Test
     with st.expander("🧪 2. Chi-Square Test of Homogeneity", expanded=False):
+        st.warning("🎓 **Assumption Reminder:** The Chi-Square test assumes that at least 80% of the cells have an expected frequency of 5 or more, and no cell has an expected frequency of less than 1. If this is violated, consider combining categories or using Fisher's Exact Test.")
+        
         if st.button("Run Chi-Square Test", key="btn_kprop_chi"):
             with st.spinner("Computing statistics..."):
                 chi2_stat, p_val, code_chi2 = perform_chi_square_test(

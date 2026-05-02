@@ -5,8 +5,19 @@ from logic.basic_code import get_numeric_columns, get_categorical_columns
 from logic.ovr_logic import perform_ftest_ovr, perform_levene_ovr
 from logic.twopop_logic import plot_confidence_interval
 
+# --- Rule 4: Cache heavy DataFrame scans for UI elements ---
+@st.cache_data(show_spinner=False)
+def get_valid_ovr_categoricals(df, categorical_cols):
+    """Caches the identification of columns with >2 categories."""
+    return [col for col in categorical_cols if df[col].nunique() > 2]
+
+@st.cache_data(show_spinner=False)
+def get_unique_categories(df, cat_col):
+    """Caches the unique categories extraction."""
+    return df[cat_col].dropna().unique().tolist()
+
 def render_ovr_variances_page():
-    st.title("One-vs-Rest: Variances Tests")
+    st.title("📊 One-vs-Rest: Variances Tests")
     
     # --- 1. Data Validation ---
     if "df" not in st.session_state or st.session_state.df is None:
@@ -21,8 +32,8 @@ def render_ovr_variances_page():
         st.error("The dataset does not contain any numeric columns.")
         return
         
-    # Lightweight check for valid categorical columns (> 2 categories for OvR)
-    valid_categorical_cols = [col for col in all_categorical_cols if df[col].nunique() > 2]
+    # Lightweight check using cached function
+    valid_categorical_cols = get_valid_ovr_categoricals(df, all_categorical_cols)
                 
     if not valid_categorical_cols:
         st.error("Error: The dataset must contain at least one categorical column with 3 or more categories.")
@@ -36,7 +47,8 @@ def render_ovr_variances_page():
     with col2:
         selected_cat_col = st.selectbox("Select grouping variable", valid_categorical_cols, key="ovr_var_cat")
     with col3:
-        available_categories = df[selected_cat_col].dropna().unique().tolist()
+        # Use cached function for lightning-fast dropdown
+        available_categories = get_unique_categories(df, selected_cat_col)
         target_cat = st.selectbox("Select Target Population ('One')", available_categories, key="ovr_var_target")
     
     st.caption(f"Comparing: **{target_cat}** vs **The Rest**")
@@ -82,33 +94,43 @@ def render_ovr_variances_page():
 
         if "ftest" in state:
             res_f = state["ftest"]
-            show_code(res_f["code"])
+            
+            # F-Test runs fast enough, no 'is_sampled' logic needed here.
+            
             f1, f2, f3 = st.columns(3)
             f1.metric("F-statistic", f"{res_f['f_stat']:.4f}")
             f2.metric(f"P-value ({alternative})", f"{res_f['p_value']:.4f}")
             f3.metric("Confidence Interval", f"({res_f['ci'][0]:.4f}, {res_f['ci'][1]:.4f})")
+            show_code(res_f["code"])
 
     # SECTION: Levene's Test
     with st.expander("🧪 2. Levene's Test for Equality of Variances (One-vs-Rest)", expanded=False):
         if st.button("Run Levene's Test", key="btn_run_ovr_levene"):
             with st.spinner("Computing Levene statistics..."):
-                stat_levene, p_value_levene, ci_levene, code_levene = perform_levene_ovr(
+                # Unpacking the 5 variables, including the sampled_flag
+                stat_levene, p_value_levene, ci_levene, code_levene, is_sampled = perform_levene_ovr(
                     df, selected_num_col, selected_cat_col, target_cat, confidence
                 )
                 state["levene"] = {
                     "stat": stat_levene,
                     "p_value": p_value_levene,
                     "ci": ci_levene,
-                    "code": code_levene
+                    "code": code_levene,
+                    "is_sampled": is_sampled
                 }
 
         if "levene" in state:
             res_l = state["levene"]
-            show_code(res_l["code"])
+            
+            # Rule 3: Transparency regarding Undersampling for Bootstrap CI in Levene's
+            if res_l.get("is_sampled"):
+                st.info("ℹ️ **Note:** Calculating Bootstrap confidence intervals on large datasets (>5000 rows) causes memory overflow. The data was proportionately sampled before bootstrapping to maintain accuracy and prevent crashes.")
+            
             l1, l2, l3 = st.columns(3)
             l1.metric("Levene Statistic", f"{res_l['stat']:.4f}")
             l2.metric("P-value", f"{res_l['p_value']:.4f}")
             l3.metric("Confidence Interval", f"({res_l['ci'][0]:.4f}, {res_l['ci'][1]:.4f})")
+            show_code(res_l["code"])
 
     # SECTION: Visual Analysis (Plot)
     with st.expander("📊 3. Visual Analysis (Confidence Interval Plot)", expanded=False):

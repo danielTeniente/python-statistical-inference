@@ -4,6 +4,17 @@ from logic.basic_code import get_numeric_columns, get_categorical_columns
 from logic.ovr_logic import perform_ttest_ovr, get_sample_difference_in_means_ovr
 from logic.twopop_logic import plot_confidence_interval
 
+# --- Rule 4: Cache heavy DataFrame scans for UI elements ---
+@st.cache_data(show_spinner=False)
+def get_valid_ovr_categoricals(df, categorical_cols):
+    """Caches the identification of columns with >2 categories to avoid lag on UI re-runs."""
+    return [col for col in categorical_cols if df[col].nunique() > 2]
+
+@st.cache_data(show_spinner=False)
+def get_unique_categories(df, cat_col):
+    """Caches the unique categories extraction to keep the selectbox extremely fast."""
+    return df[cat_col].dropna().unique().tolist()
+
 def render_ovr_means_page():
     st.title("One-vs-Rest: Means Tests")
     
@@ -20,8 +31,8 @@ def render_ovr_means_page():
         st.error("The dataset does not contain any numeric columns.")
         return
 
-    # Lightweight check for valid categorical columns
-    valid_categorical_cols = [col for col in all_categorical_cols if df[col].nunique() > 2]
+    # Use the cached function to prevent scanning 250k rows on every rerun
+    valid_categorical_cols = get_valid_ovr_categoricals(df, all_categorical_cols)
     
     if not valid_categorical_cols:
         st.error("Error: The dataset must contain at least one categorical column with 3 or more categories.")
@@ -35,7 +46,8 @@ def render_ovr_means_page():
     with col2:
         selected_cat_col = st.selectbox("Select grouping variable", valid_categorical_cols, key="ovr_mean_cat")
     with col3:
-        available_categories = df[selected_cat_col].dropna().unique().tolist()
+        # Use the cached function for lightning-fast dropdown population
+        available_categories = get_unique_categories(df, selected_cat_col)
         target_cat = st.selectbox("Select Target Population ('One')", available_categories, key="ovr_mean_target")
 
     st.caption(f"Comparing: **{target_cat}** vs **The Rest**")
@@ -83,11 +95,14 @@ def render_ovr_means_page():
 
         if "ttest" in state:
             res = state["ttest"]
-            show_code(res["code"])
+            
+            # Note: No 'is_sampled' check here because T-Test runs in O(N) and easily handles 250k rows.
+            
             m1, m2, m3 = st.columns(3)
             m1.metric("T-statistic", f"{res['t_stat']:.4f}")
             m2.metric(f"P-value ({alternative})", f"{res['p_value']:.4f}")
             m3.metric("Confidence Interval", f"({res['ci'][0]:.4f}, {res['ci'][1]:.4f})")
+            show_code(res["code"])
 
     # SECTION: Confidence Interval Plot
     with st.expander("📊 2. Visual Analysis (Confidence Interval Plot)", expanded=False):

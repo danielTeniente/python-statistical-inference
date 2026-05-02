@@ -4,6 +4,16 @@ from logic.basic_code import get_numeric_columns, get_categorical_columns
 from logic.ovr_logic import perform_mannwhitney_ovr, get_sample_difference_in_medians_ovr
 from logic.twopop_logic import plot_confidence_interval
 
+@st.cache_data(show_spinner=False)
+def get_valid_ovr_categoricals(df, categorical_cols):
+    """Caches the identification of columns with >2 categories."""
+    return [col for col in categorical_cols if df[col].nunique() > 2]
+
+@st.cache_data(show_spinner=False)
+def get_unique_categories(df, cat_col):
+    """Caches the unique categories extraction."""
+    return df[cat_col].dropna().unique().tolist()
+
 def render_ovr_medians_page():
     st.title("One-vs-Rest: Medians Tests")
     
@@ -20,8 +30,8 @@ def render_ovr_medians_page():
         st.error("The dataset does not contain any numeric columns.")
         return
     
-    # Filter categorical columns for OvR (needs > 2 categories)
-    valid_categorical_cols = [col for col in all_categorical_cols if df[col].nunique() > 2]
+    # Use cached function to prevent lagging the UI on slider updates
+    valid_categorical_cols = get_valid_ovr_categoricals(df, all_categorical_cols)
     
     if not valid_categorical_cols:
         st.error("Error: The dataset must contain at least one categorical column with 3 or more categories.")
@@ -35,7 +45,8 @@ def render_ovr_medians_page():
     with col2:
         selected_cat_col = st.selectbox("Select grouping variable", valid_categorical_cols, key="ovr_med_cat")
     with col3:
-        available_categories = df[selected_cat_col].dropna().unique().tolist()
+        # Use cached function for lightning-fast dropdown population
+        available_categories = get_unique_categories(df, selected_cat_col)
         target_cat = st.selectbox("Select Target Population ('One')", available_categories, key="ovr_med_target")
 
     st.caption(f"Comparing: **{target_cat}** vs **The Rest**")
@@ -69,23 +80,30 @@ def render_ovr_medians_page():
     with st.expander("🧪 1. Mann-Whitney U Test (One-vs-Rest)", expanded=not state.get("mw_test")):
         if st.button("Run Median Comparison", key="btn_run_ovr_mw"):
             with st.spinner("Computing Mann-Whitney statistics..."):
-                u_stat, p_value, ci, code = perform_mannwhitney_ovr(
+                # Unpacking the 5 variables, including the sampled_flag
+                u_stat, p_value, ci, code, is_sampled = perform_mannwhitney_ovr(
                     df, selected_num_col, selected_cat_col, target_cat, alternative, confidence
                 )
                 state["mw_test"] = {
                     "u_stat": u_stat,
                     "p_value": p_value,
                     "ci": ci,
-                    "code": code
+                    "code": code,
+                    "is_sampled": is_sampled
                 }
 
         if "mw_test" in state:
             res = state["mw_test"]
-            show_code(res["code"])
+            
+            # Rule 3: Transparency regarding Undersampling for Bootstrap
+            if res.get("is_sampled"):
+                st.info("ℹ️ **Note:** Calculating Bootstrap confidence intervals on very large datasets (>5000 rows) causes memory overflow. The data was proportionately sampled to maintain structural integrity and performance.")
+                
             m1, m2, m3 = st.columns(3)
             m1.metric("U-statistic", f"{res['u_stat']:.4f}")
             m2.metric(f"P-value ({alternative})", f"{res['p_value']:.4f}")
             m3.metric("Confidence Interval", f"({res['ci'][0]:.4f}, {res['ci'][1]:.4f})")
+            show_code(res["code"])
 
     # SECTION: CI Plot
     with st.expander("📊 2. Visual Analysis (Confidence Interval Plot)", expanded=False):
@@ -93,9 +111,14 @@ def render_ovr_medians_page():
             with st.spinner("Generating plot..."):
                 # Fetch CI from state or calculate if not already present
                 if "mw_test" not in state:
-                    u_stat, p_value, ci, _ = perform_mannwhitney_ovr(
+                    u_stat, p_value, ci, code, is_sampled = perform_mannwhitney_ovr(
                         df, selected_num_col, selected_cat_col, target_cat, alternative, confidence
                     )
+                    # Safely cache it if we just ran it
+                    state["mw_test"] = {
+                        "u_stat": u_stat, "p_value": p_value, "ci": ci, 
+                        "code": code, "is_sampled": is_sampled
+                    }
                 else:
                     ci = state["mw_test"]["ci"]
 

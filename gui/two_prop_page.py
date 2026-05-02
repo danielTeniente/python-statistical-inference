@@ -1,11 +1,29 @@
 import streamlit as st
-import pandas as pd
 from logic.proportions_logic import (
     perform_two_proportion_ztest, 
     get_two_proportion_confint
 )
 from logic.independence_logic import perform_fisher_exact_test, get_contingency_table
 from gui.components import show_code
+
+# --- HELPER FUNCTIONS CON CACHÉ ---
+@st.cache_data(show_spinner=False)
+def get_binary_columns(df):
+    """Escanea el DataFrame una sola vez para encontrar columnas con exactamente 2 categorías."""
+    valid_cols = []
+    for col in df.columns:
+        if df[col].isnull().all():
+            continue
+        # dropna=True evita que los nulos se cuenten como una tercera categoría
+        if df[col].nunique(dropna=True) == 2:
+            valid_cols.append(col)
+    return valid_cols
+
+@st.cache_data(show_spinner=False)
+def get_column_unique_vals(df, col):
+    """Extrae valores únicos de forma cacheada."""
+    return df[col].dropna().unique()
+
 
 def render_twoprop_test_page():
     st.title("Two Proportions Test")
@@ -17,14 +35,14 @@ def render_twoprop_test_page():
     
     df = st.session_state.df
 
-    # Quick check for binary columns
-    valid_cols = [col for col in df.columns if df[col].dropna().nunique() == 2]
+    # --- 2. Lightweight Variable Filtering (Cached) ---
+    valid_cols = get_binary_columns(df)
 
     if len(valid_cols) < 2:
         st.error("The dataset must contain at least two binary columns (e.g., Groups and Outcomes).")
         return
 
-    # --- 2. Test Configuration ---
+    # --- 3. Test Configuration ---
     st.markdown("### Configuration")
     col1, col2 = st.columns(2)
     
@@ -33,35 +51,33 @@ def render_twoprop_test_page():
                                  help="The variable that splits your data into two groups.",
                                  key="twoprop_group")
         
-        # Determine success term based on outcome variable
+        # Filtrar para no seleccionar la misma variable en ambos campos
         remaining_cols = [c for c in valid_cols if c != group_col]
         outcome_col = st.selectbox("Select Outcome Variable", 
                                    remaining_cols if remaining_cols else valid_cols, 
                                    index=0, key="twoprop_outcome")
 
     with col2:
-        unique_vals = df[outcome_col].dropna().unique()
+        unique_vals = get_column_unique_vals(df, outcome_col)
         success_term = st.selectbox("Value for 'Success'", options=unique_vals, key="twoprop_success")
         confidence = st.slider("Confidence level", 0.80, 0.99, 0.95, 0.01, key="twoprop_conf")
     
     alternative = st.selectbox("Alternative hypothesis", ["two-sided", "larger", "smaller"], key="twoprop_alt")
 
-    # --- 3. Context ID and Cache Management ---
-    # Create unique ID based on all parameters
+    # --- 4. Context ID and Cache Management ---
     current_id = f"{group_col}_{outcome_col}_{success_term}_{confidence}_{alternative}"
     
-    # Invalidate results if parameters changed
     if ("twoprop_state" not in st.session_state or 
         st.session_state.get("twoprop_id") != current_id):
         
-        st.session_state.twoprop_state = {}  # Isolated results dictionary
+        st.session_state.twoprop_state = {}  
         st.session_state.twoprop_id = current_id
 
     state = st.session_state.twoprop_state
 
     st.divider()
 
-    # --- 4. Granular Analysis Sections ---
+    # --- 5. Granular Analysis Sections ---
 
     # SECTION: Contingency Table
     with st.expander("📊 1. Contingency Table", expanded=not state.get("table")):
@@ -77,7 +93,7 @@ def render_twoprop_test_page():
 
     # SECTION: Fisher's Exact Test
     with st.expander("🧪 2. Fisher's Exact Test", expanded=False):
-        st.info("Recommended for small sample sizes.")
+        st.info("💡 **Didactic Note:** Recommended for small sample sizes.")
         if st.button("Run Fisher's Exact Test", key="btn_twoprop_fisher"):
             with st.spinner("Computing exact p-value..."):
                 stat, p_val, code_f = perform_fisher_exact_test(
@@ -95,6 +111,22 @@ def render_twoprop_test_page():
 
     # SECTION: Z-Test
     with st.expander("📏 3. Z-Test for Two Proportions", expanded=False):
+        # Validación Didáctica de Suposiciones (Pooled Proportion)
+        stats = (df[outcome_col] == success_term).groupby(df[group_col]).agg(['sum', 'count'])
+        successes = stats['sum'].values
+        trials = stats['count'].values
+        
+        if len(trials) == 2:
+            p_pool = successes.sum() / trials.sum()
+            exp_successes = trials * p_pool
+            exp_failures = trials * (1 - p_pool)
+            
+            if (exp_successes < 10).any() or (exp_failures < 10).any():
+                min_exp = min(exp_successes.min(), exp_failures.min())
+                st.warning(f"🎓 **Assumption Alert:** The minimum expected count under the null hypothesis is **{min_exp:.1f}** (less than 10). The normal approximation may be invalid. **Fisher's Exact Test** is recommended.")
+            else:
+                st.success("✔️ **Assumption Met:** All expected success and failure counts in both groups are $\\ge 10$.")
+
         if st.button("Run Z-Test", key="btn_twoprop_z"):
             with st.spinner("Computing Z-statistic..."):
                 stat_z, p_z, code_z = perform_two_proportion_ztest(

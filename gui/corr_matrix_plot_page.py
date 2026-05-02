@@ -109,5 +109,4 @@ def render_correlation_heatmap_page():
             
             st.divider()
             st.markdown("#### Reproducible Code")
-            st.info("Use this code to reproduce the function in your own environment.")
             show_code(res["code"])
