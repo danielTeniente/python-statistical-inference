@@ -6,8 +6,12 @@ from logic.kpop_logic import perform_bootstrap_pairwise_median, perform_krustall
 
 @st.cache_data(show_spinner=False)
 def filter_kpop_data(df, cat_col, selected_cats):
-    """Caches the heavy Pandas filtering operation to avoid repeating it on multiple button clicks."""
-    return df[df[cat_col].isin(selected_cats)].copy()
+    """Caches the heavy Pandas filtering and removes unused categories."""
+    filtered = df[df[cat_col].isin(selected_cats)].copy()
+    # If the column is categorical, remove categories not present in the filtered data
+    if isinstance(filtered[cat_col].dtype, pd.CategoricalDtype):
+        filtered[cat_col] = filtered[cat_col].cat.remove_unused_categories()
+    return filtered
 
 def render_kpop_medians_page():
     st.title("k-Sample Median Tests")
@@ -44,10 +48,11 @@ def render_kpop_medians_page():
 
     # --- LÍMITE FRONTAL 1: Prevención de Explosión Combinatoria ---
     MAX_CATEGORIES = 12
-    st.info(
-        f"ℹ️ **Rendering Limit:** To prevent the visualization from freezing your browser, "
-        f"you can select a maximum of **{MAX_CATEGORIES} categories** for comparison."
-    )
+    if len(available_categories) > MAX_CATEGORIES:
+        st.info(
+            f"ℹ️ **Rendering Limit:** To prevent the visualization from freezing your browser, "
+            f"you can select a maximum of **{MAX_CATEGORIES} categories** for comparison."
+        )
 
     # Safe default (max 5)
     default_cats = available_categories[:5] if len(available_categories) >= 5 else available_categories
@@ -65,6 +70,23 @@ def render_kpop_medians_page():
         return 
 
     confidence = st.slider("Confidence level", 0.80, 0.99, 0.95, 0.01)
+
+    # ------------------------------------------------------------------
+    # NEW: Show reproducible filter code to the student
+    # ------------------------------------------------------------------
+    with st.expander("🔍 Data Filtering Code", expanded=False):
+        filter_code = (
+            f"# Assuming 'df' is your loaded pandas DataFrame\n"
+            f"selected_categories = {selected_categories}\n"
+            f"filtered_df = df[df['{selected_cat_col}'].isin(selected_categories)].copy()\n"
+        )
+        # If the column is categorical, add the line that removes unused categories
+        if isinstance(df[selected_cat_col].dtype, pd.CategoricalDtype):
+            filter_code += (
+                f"# Remove unused categories (safety step for categorical columns)\n"
+                f"filtered_df['{selected_cat_col}'] = filtered_df['{selected_cat_col}'].cat.remove_unused_categories()\n"
+            )
+        show_code(filter_code)
 
     # --- 3. Context Identification & State Management ---
     current_id = f"{selected_num_col}_{selected_cat_col}_{sorted(selected_categories)}_{confidence}"
