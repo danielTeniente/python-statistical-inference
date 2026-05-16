@@ -67,13 +67,33 @@ def render_create_categorical_page():
         up_str = "+∞" if upper == np.inf else str(upper)
 
         if right_inclusive:
-            notation = f"]{low_str}, {up_str}]"
-            explanation = f"x > {low_str} and x ≤ {up_str}" if lower != -np.inf else f"x ≤ {up_str}"
+            left_bracket = "]"
+            right_bracket = "[" if upper == np.inf else "]"
+            
+            if lower == -np.inf and upper == np.inf:
+                explanation = "Any number"
+            elif lower == -np.inf:
+                explanation = f"x ≤ {up_str}"
+            elif upper == np.inf:
+                explanation = f"x > {low_str}"
+            else:
+                explanation = f"x > {low_str} and x ≤ {up_str}"
+                
         else:
-            notation = f"[{low_str}, {up_str}["
-            explanation = f"x ≥ {low_str} and x < {up_str}" if upper != np.inf else f"x ≥ {low_str}"
+            left_bracket = "]" if lower == -np.inf else "["
+            right_bracket = "["
+            
+            if lower == -np.inf and upper == np.inf:
+                explanation = "Any number"
+            elif lower == -np.inf:
+                explanation = f"x < {up_str}"
+            elif upper == np.inf:
+                explanation = f"x ≥ {low_str}"
+            else:
+                explanation = f"x ≥ {low_str} and x < {up_str}"
 
-        st.write(f"- **{labels[i]}**: `{notation}` *(Means: {explanation})*")
+        notation = f"{left_bracket}{low_str}, {up_str}{right_bracket}"
+        st.write(f"- **{labels[i]}**: `{notation}` *({explanation})*")
 
     st.divider()
 

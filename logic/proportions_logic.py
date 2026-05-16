@@ -1,5 +1,3 @@
-import pandas as pd
-import numpy as np
 from scipy.stats import binomtest
 from statsmodels.stats.proportion import proportions_ztest, proportion_confint, confint_proportions_2indep
 

@@ -34,21 +34,41 @@ def render_change_dtype_page():
         st.text_input("Current Data Type", value=current_dtype, disabled=True)
         
     with col3:
-        # Mapping friendly names to pandas dtypes
+        # Mapping friendly names to pandas dtypes, including optimized ones
         dtype_options = {
-            "String / Text (str)": "str",
-            "Integer (int64)": "int64",
-            "Float / Decimal (float64)": "float64",
+            "Categorical (category)": "category",
+            "String / Text (string)": "string",
+            "Tiny Integer (int8)": "int8",
+            "Small Integer (int16)": "int16",
+            "Standard Integer (int32)": "int32",
+            "Large Integer (int64)": "int64",
+            "Small Decimal (float32)": "float32",
+            "Large Decimal (float64)": "float64",
             "Boolean (bool)": "bool",
-            "Datetime (datetime64)": "datetime64[ns]",
-            "Categorical (category)": "category"
+            "Datetime (datetime64)": "datetime64[ns]"
         }
         
         target_dtype_label = st.selectbox("Select New Data Type", list(dtype_options.keys()))
         target_dtype = dtype_options[target_dtype_label]
 
-    st.divider()
+    # 3. Educational Guide / Memory Optimization Tips
+    dtype_guides = {
+        "Categorical (category)": "🌟 **Highly Recommended for Memory:** Use this for text columns with few unique, repeating values (e.g., 'Country', 'Gender', 'Status'). It assigns a numeric code behind the scenes, reducing memory usage by up to 90% compared to strings.",
+        "String / Text (string)": "📝 **Use for:** General text, unique names, descriptions, or IDs with letters. Not memory efficient, but necessary for free-text data.",
+        "Tiny Integer (int8)": "⚡ **Memory Saver:** Uses only 1 byte. Range is **-128 to 127**. Perfect for small numbers like age, months, or 1-5 ratings. Saves 87% memory compared to int64.",
+        "Small Integer (int16)": "⚡ **Memory Saver:** Uses 2 bytes. Range is **-32,768 to 32,767**. Great for years (e.g., 2024) or small quantities.",
+        "Standard Integer (int32)": "⚖️ **Balanced:** Uses 4 bytes. Range is **-2 Billion to 2 Billion**. Good for most general integer needs when numbers exceed 32,000.",
+        "Large Integer (int64)": "⚠️ **Memory Heavy:** Default pandas integer (8 bytes). Only necessary for astronomically large numbers, massive global IDs, or high-resolution timestamp counts.",
+        "Small Decimal (float32)": "⚡ **Memory Saver:** Uses 4 bytes. Good for up to 7 decimal digits. Perfect for weights, heights, percentages, or sensor data where extreme mathematical precision isn't critical. Cuts memory in half.",
+        "Large Decimal (float64)": "⚠️ **Memory Heavy:** Default pandas decimal (8 bytes). High precision (up to 15 decimal digits). Only necessary for exact scientific calculations or high-precision GPS coordinates.",
+        "Boolean (bool)": "✅ **Use for:** Binary True/False, Yes/No, or 1/0 data. Highly memory efficient.",
+        "Datetime (datetime64)": "📅 **Use for:** Dates and timestamps. Unlocks time-series features allowing you to easily extract Year, Month, Day, or calculate time differences."
+    }
 
+    # Display the guide for the selected type
+    st.info(dtype_guides[target_dtype_label])
+
+    st.divider()
     # 3. Action Button and Transformation Logic
     if st.button("Change Data Type", type="primary"):
         if current_dtype == target_dtype:

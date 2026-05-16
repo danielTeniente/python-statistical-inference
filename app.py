@@ -26,6 +26,7 @@ from gui.independence_page import render_independence_test_page
 from gui.association_page import render_association_measures_page
 from gui.corr_matrix_plot_page import render_correlation_heatmap_page
 from gui.correlation_page import render_correlation_page
+from gui.data_cleaning_page import render_data_cleaning_page
 
 # Global Configuration
 st.set_page_config(page_title="Statistics in Python", layout="wide")
@@ -53,6 +54,9 @@ with st.sidebar.expander("Data Transformation", expanded=False):
 
     if st.button("Create Categorical Variable", use_container_width=True):
         change_page("Create Categorical Variable")
+
+    if st.button("Clean Data", use_container_width=True):
+        change_page("Clean Data")
 
 with st.sidebar.expander("Descriptive Statistics", expanded=False):
     # Subsección: Variables Numéricas
@@ -204,3 +208,5 @@ elif page == "Create Categorical Variable":
     render_create_categorical_page()
 elif page == "Change Data Types":
     render_change_dtype_page()
+elif page == "Clean Data":
+    render_data_cleaning_page()

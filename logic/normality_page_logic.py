@@ -27,13 +27,13 @@ def run_normality_test(df, column, test_type):
     code += "\n"
     
     # 2. Executing logic and finishing snippet
-    if test_type == "Shapiro–Wilk":
+    if test_type == "Shapiro-Wilk":
         stat, p = stats.shapiro(data)
         code += "stat, p = stats.shapiro(data)\n"
-    elif test_type == "D’Agostino–Pearson":
+    elif test_type == "D'Agostino-Pearson":
         stat, p = stats.normaltest(data)
         code += "stat, p = stats.normaltest(data)\n"
-    elif test_type == "Kolmogorov–Smirnov":
+    elif test_type == "Kolmogorov-Smirnov":
         z_data = (data - data.mean()) / data.std(ddof=0)
         stat, p = stats.kstest(z_data, 'norm')
         code += "# Kolmogorov-Smirnov requires the data to be standardized (Z-scores)\n"

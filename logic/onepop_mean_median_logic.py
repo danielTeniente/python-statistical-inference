@@ -44,11 +44,9 @@ def get_bootstrap_ci(df, col, confidence=0.95, threshold=5000):
     
     if n > threshold:
         # Subsample for safety
-        np.random.seed(42) # Fixed seed for reproducible educational output
         data_to_use = np.random.choice(data, size=threshold, replace=False)
         
         code += f"\n# Dataset exceeds {threshold} records. Taking a random subsample for performance.\n"
-        code += "np.random.seed(42)\n"
         code += f"data_to_use = np.random.choice(data, size={threshold}, replace=False)\n"
     else:
         data_to_use = data
