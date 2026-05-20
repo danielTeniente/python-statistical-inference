@@ -5,12 +5,23 @@ from logic.twopop_logic import perform_ftest, perform_levene, plot_confidence_in
 
 @st.cache_data(show_spinner=False)
 def cached_numeric_columns(df):
+    """Return a list of numeric column names (cached per DataFrame)."""
     return get_numeric_columns(df)
 
 @st.cache_data(show_spinner=False)
-def cached_valid_binary_cat_cols(df):
-    cat_cols = get_categorical_columns(df)
-    return [col for col in cat_cols if df[col].nunique() == 2]
+def cached_categorical_cols(df):
+    """
+    Return all categorical columns. We allow columns with more than 
+    2 categories, since the user will manually select which 2 to compare.
+    """
+    return get_categorical_columns(df)
+
+@st.cache_data(show_spinner=False)
+def filter_dataframe_by_categories(df, col, categories):
+    """
+    Filtrado eficiente del dataframe usando isin() y caché.
+    """
+    return df[df[col].isin(categories)].copy()
 
 
 def render_twopop_variances_page():
@@ -23,34 +34,64 @@ def render_twopop_variances_page():
 
     df = st.session_state.df
     numeric_cols = cached_numeric_columns(df)
-    valid_categorical_cols = cached_valid_binary_cat_cols(df)
+    categorical_cols = cached_categorical_cols(df)
 
     if not numeric_cols:
         st.error("The dataset does not contain any numeric columns.")
         return
-    if not valid_categorical_cols:
-        st.error("Error: The dataset must contain at least one categorical column with exactly two categories.")
+    if not categorical_cols:
+        st.error("Error: The dataset must contain at least one categorical column.")
         return
 
     # --- 2. Test Configuration ---
     st.markdown("### Test Setup")
     col1, col2 = st.columns(2)
     with col1:
-        selected_num_col = st.selectbox("Select numerical variable", numeric_cols, key="tpv_num")
+        selected_num_col = st.selectbox(
+            "Select numerical variable", numeric_cols, key="tpv_num"
+        )
     with col2:
-        selected_cat_col = st.selectbox("Select grouping variable (2 populations)", valid_categorical_cols, key="tpv_cat")
+        selected_cat_col = st.selectbox(
+            "Select grouping variable", categorical_cols, key="tpv_cat"
+        )
 
-    groups = df[selected_cat_col].dropna().unique()
-    st.caption(f"Comparing variances of: **{groups[0]}** vs **{groups[1]}**")
+    # Extraemos todas las categorías únicas válidas de la columna seleccionada
+    unique_categories = df[selected_cat_col].dropna().unique().tolist()
+    
+    # Multiselect que restringe a un máximo de 2 opciones
+    selected_categories = st.multiselect(
+        "Select exactly 2 categories to compare",
+        options=unique_categories,
+        max_selections=2,
+        key="tpv_cats_select"
+    )
+
+    # Bloqueamos la vista de los tests hasta que existan exactamente 2 categorías
+    if len(selected_categories) != 2:
+        st.info("ℹ️ Please select exactly two categories to proceed with the tests.")
+        return
+
+    st.caption(f"Comparing variances of: **{selected_categories[0]}** vs **{selected_categories[1]}**")
+
+    # Creamos el df_filtrado de forma eficiente
+    df_filtrado = filter_dataframe_by_categories(df, selected_cat_col, selected_categories)
 
     col3, col4 = st.columns(2)
     with col3:
-        alternative = st.selectbox("Alternative hypothesis", ["two-sided", "less", "greater"], key="tpv_alt")
+        alternative = st.selectbox(
+            "Alternative hypothesis", 
+            ["two-sided", "less", "greater"], 
+            key="tpv_alt"
+        )
     with col4:
-        confidence = st.slider("Confidence level", 0.80, 0.99, 0.95, 0.01, key="tpv_conf")
+        confidence = st.slider(
+            "Confidence level", 0.80, 0.99, 0.95, 0.01, key="tpv_conf"
+        )
 
     # --- 3. Context ID and Isolated State ---
-    current_context_id = f"{selected_num_col}_{selected_cat_col}_{alternative}_{confidence}"
+    cat_str = "_".join(str(c) for c in selected_categories)
+    current_context_id = f"{selected_num_col}_{selected_cat_col}_{cat_str}_{alternative}_{confidence}"
+    
     if (
         "twopop_var_state" not in st.session_state
         or st.session_state.get("twopop_var_id") != current_context_id
@@ -64,9 +105,8 @@ def render_twopop_variances_page():
     with st.expander("🧪 1. F‑Test for Equality of Variances", expanded=not state.get("ftest")):
         if st.button("Run F‑Test", key="btn_run_ftest"):
             with st.spinner("Computing F‑test statistics..."):
-                # perform_ftest now returns 5 values (is_sampled added, always False)
                 f_stat, p_val, ci, code = perform_ftest(
-                    df, selected_num_col, selected_cat_col, alternative, confidence
+                    df_filtrado, selected_num_col, selected_cat_col, alternative, confidence
                 )
                 state["ftest"] = {
                     "f_stat": f_stat,
@@ -90,9 +130,9 @@ def render_twopop_variances_page():
     with st.expander("🧪 2. Levene's Test for Equality of Variances", expanded=False):
         if st.button("Run Levene's Test", key="btn_run_levene"):
             with st.spinner("Computing Levene statistics..."):
-                # perform_levene now returns 5 values (is_sampled may be True)
+                # Enviamos df_filtrado a perform_levene
                 stat, p_val_l, ci_l, code_l, is_sampled = perform_levene(
-                    df, selected_num_col, selected_cat_col, confidence
+                    df_filtrado, selected_num_col, selected_cat_col, confidence
                 )
                 state["levene"] = {
                     "stat": stat,
@@ -114,7 +154,7 @@ def render_twopop_variances_page():
             )
             if res_l.get("is_sampled"):
                 st.info(
-                    "The bootstrap confidence interval was computed on a safety-sampled subset "
+                    "ℹ️ The bootstrap confidence interval was computed on a safety-sampled subset "
                     "of the data (proportional stratified sampling) to avoid memory overload."
                 )
 
@@ -127,9 +167,11 @@ def render_twopop_variances_page():
                 with st.spinner("Generating visualization..."):
                     ci = state["ftest"]["ci"]
                     f_stat = state["ftest"]["f_stat"]
+                    name1, name2 = selected_categories[0], selected_categories[1]
+                    
                     fig, code_plot = plot_confidence_interval(
                         ci[0], ci[1], f_stat,
-                        title="Confidence Interval for the Variance Ratio",
+                        title=rf"CI for the Variance Ratio ($\sigma_{{{name1}}}^2 / \sigma_{{{name2}}}^2$)",
                         x_label="Ratio",
                         y_label="Variance Test",
                         H0=1,

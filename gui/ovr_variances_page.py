@@ -147,7 +147,7 @@ def render_ovr_variances_page():
 
                 fig, code_plot = plot_confidence_interval(
                     ci[0], ci[1], f_stat, 
-                    title=f"Variance Ratio CI ({target_cat} / Rest)", 
+                    title=rf"CI for the Variance Ratio ($\sigma^2_{{{target_cat}}} / \sigma^2_{{{"Rest"}}}$)", 
                     x_label="Ratio", 
                     y_label="Variance Test", 
                     H0=1

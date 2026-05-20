@@ -124,7 +124,7 @@ def render_ovr_means_page():
                 # Generate plot
                 fig, code_plot = plot_confidence_interval(
                     ci[0], ci[1], sample_diff, 
-                    title=f"CI for Difference in Means ({target_cat} - Rest)", 
+                    title=rf"CI for the Difference in Means ($\mu_{{{target_cat}}} - \mu_{{{"Rest"}}}$)", 
                     x_label="Difference in Means", 
                     y_label="Means Test"
                 )

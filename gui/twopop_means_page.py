@@ -13,18 +13,20 @@ def cached_numeric_columns(df):
     return get_numeric_columns(df)
 
 @st.cache_data(show_spinner=False)
-def cached_valid_categorical_cols(df):
+def cached_categorical_cols(df):
     """
-    Return categorical columns that have exactly two non‑null unique values.
-    This is the lightweight filtering needed for two‑population tests.
+    Return all categorical columns. We now allow columns with more than 
+    2 categories, since the user will manually select which 2 to compare.
     """
-    cat_cols = get_categorical_columns(df)
-    valid = []
-    for col in cat_cols:
-        # Use nunique(dropna=True) to ignore NaNs
-        if df[col].nunique() == 2:
-            valid.append(col)
-    return valid
+    return get_categorical_columns(df)
+
+@st.cache_data(show_spinner=False)
+def filter_dataframe_by_categories(df, col, categories):
+    """
+    Filtrado eficiente del dataframe usando isin() y caché para no repetir
+    la operación en cada re-render si los datos no han cambiado.
+    """
+    return df[df[col].isin(categories)].copy()
 
 def render_twopop_means_page():
     st.title("Two Population Means Tests")
@@ -36,13 +38,13 @@ def render_twopop_means_page():
 
     df = st.session_state.df
     numeric_cols = cached_numeric_columns(df)
-    valid_categorical_cols = cached_valid_categorical_cols(df)
+    categorical_cols = cached_categorical_cols(df)
 
     if not numeric_cols:
         st.error("The dataset does not contain any numeric columns.")
         return
-    if not valid_categorical_cols:
-        st.error("Error: The dataset must contain at least one categorical column with exactly two categories.")
+    if not categorical_cols:
+        st.error("Error: The dataset must contain at least one categorical column.")
         return
 
     # --- 2. Test Configuration ---
@@ -54,11 +56,29 @@ def render_twopop_means_page():
         )
     with col2:
         selected_cat_col = st.selectbox(
-            "Select grouping variable (2 populations)", valid_categorical_cols, key="tp_cat"
+            "Select grouping variable", categorical_cols, key="tp_cat"
         )
 
-    groups = df[selected_cat_col].dropna().unique()
-    st.caption(f"Comparing groups: **{groups[0]}** vs **{groups[1]}**")
+    # Extraemos todas las categorías únicas válidas de la columna seleccionada
+    unique_categories = df[selected_cat_col].dropna().unique().tolist()
+    
+    # Multiselect que restringe a un máximo de 2 opciones
+    selected_categories = st.multiselect(
+        "Select exactly 2 categories to compare",
+        options=unique_categories,
+        max_selections=2,
+        key="tp_cats_select"
+    )
+
+    # Bloqueamos la vista de los tests hasta que existan exactamente 2 categorías
+    if len(selected_categories) != 2:
+        st.info("ℹ️ Please select exactly two categories to proceed with the tests.")
+        return
+
+    st.caption(f"Comparing groups: **{selected_categories[0]}** vs **{selected_categories[1]}**")
+
+    # Creamos el df_filtrado de forma eficiente
+    df_filtrado = filter_dataframe_by_categories(df, selected_cat_col, selected_categories)
 
     col3, col4 = st.columns(2)
     with col3:
@@ -73,10 +93,11 @@ def render_twopop_means_page():
         )
     equal_var = st.checkbox("Assume equal variances", value=True, key="tp_eq_var")
 
-    # --- 3. Context ID and Isolated State ---
+    cat_str = "_".join(str(c) for c in selected_categories)
     current_context_id = (
-        f"{selected_num_col}_{selected_cat_col}_{alternative}_{confidence}_{equal_var}"
+        f"{selected_num_col}_{selected_cat_col}_{cat_str}_{alternative}_{confidence}_{equal_var}"
     )
+    
     if (
         "twopop_means_state" not in st.session_state
         or st.session_state.get("twopop_means_id") != current_context_id
@@ -91,7 +112,7 @@ def render_twopop_means_page():
         if st.button("Run T-Test", key="btn_run_ttest"):
             with st.spinner("Computing T-test statistics..."):
                 t_stat, p_value, ci, code = perform_ttest(
-                    df, selected_num_col, selected_cat_col,
+                    df_filtrado, selected_num_col, selected_cat_col,
                     alternative, confidence, equal_var
                 )
                 state["ttest"] = {
@@ -101,7 +122,6 @@ def render_twopop_means_page():
                     "code": code,
                     "is_sampled": False,
                 }
-            # If we also already have a plot, we can update its CI (avoids stale plot)
             if "plot" in state:
                 state["plot"]["ci"] = ci
 
@@ -117,24 +137,25 @@ def render_twopop_means_page():
             )
 
     with st.expander("📊 2. Confidence Interval Plot", expanded=False):
-        # Verify prerequisite: T‑test must be already computed
         if "ttest" not in state:
             st.warning("⚠️ Please run the T-Test first (expand the section above) to obtain the confidence interval.")
             st.button("Generate Plot", key="btn_gen_plot", disabled=True)
         else:
             if st.button("Generate Plot", key="btn_gen_plot"):
                 with st.spinner("Generating visualization..."):
-                    # Recover the CI from the already computed T‑test
                     ci = state["ttest"]["ci"]
 
-                    # Calculate sample difference in means
+                    # Utilizamos el df_filtrado aquí también
                     sample_diff, code_diff = get_sample_difference_in_means(
-                        df, selected_num_col, selected_cat_col
+                        df_filtrado, selected_num_col, selected_cat_col
                     )
-                    # Generate the plot
+                    
+                    # Asignamos dinámicamente los nombres al título usando las categorías seleccionadas
+                    name1, name2 = selected_categories[0], selected_categories[1]
+                    
                     fig, code_plot = plot_confidence_interval(
                         ci[0], ci[1], sample_diff,
-                        title="Confidence Interval for the Difference in Means",
+                        title=rf"CI for the Difference in Means ($\mu_{{{name1}}} - \mu_{{{name2}}}$)",
                         x_label="Difference in Means",
                         y_label="Means Test",
                     )

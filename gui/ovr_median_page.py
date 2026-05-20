@@ -130,7 +130,7 @@ def render_ovr_medians_page():
                 # Generate visual plot
                 fig, code_plot = plot_confidence_interval(
                     ci[0], ci[1], dataset_diff, 
-                    title=f"CI for Difference in Medians ({target_cat} - Rest)", 
+                    title=rf"CI for the Difference in Medians ($M_{{{target_cat}}} - M_{{{"Rest"}}}$)", 
                     x_label="Difference in Medians", 
                     y_label="Medians Test"
                 )

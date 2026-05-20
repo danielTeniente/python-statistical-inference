@@ -11,18 +11,52 @@ import matplotlib.pyplot as plt
 # If exceeded, stratified proportional sampling is applied.
 BOOTSTRAP_SAFETY_LIMIT = 5000
 
+def apply_safety_sampling(data1, data2, var1_name="data1", var2_name="data2", limit=BOOTSTRAP_SAFETY_LIMIT):
+    """
+    Applies proportional stratified sampling if the total number of observations
+    exceeds the safety limit. Returns the sampled series, a boolean flag, and 
+    the reproducible python code string.
+    """
+    n1, n2 = len(data1), len(data2)
+    total_len = n1 + n2
+    is_sampled = False
+    
+    if total_len > limit:
+        is_sampled = True
+        frac = limit / total_len
+        data1_boot = data1.sample(frac=frac)
+        data2_boot = data2.sample(frac=frac)
+        
+        sampling_code = (
+            f"# Safety undersampling for bootstrap CI (limit = {limit})\n"
+            f"total_len = len({var1_name}) + len({var2_name})\n"
+            f"frac = {limit} / total_len\n"
+            f"{var1_name}_ci = {var1_name}.sample(frac=frac)\n"
+            f"{var2_name}_ci = {var2_name}.sample(frac=frac)\n"
+        )
+    else:
+        data1_boot = data1
+        data2_boot = data2
+        sampling_code = (
+            f"{var1_name}_ci, {var2_name}_ci = {var1_name}, {var2_name}\n"
+        )
+        
+    return data1_boot, data2_boot, is_sampled, sampling_code
+
+
+# ===========================================================================
+# STATISTICAL TESTS
+# ===========================================================================
 
 def perform_ftest(df, num_col, cat_col, alternative='two-sided', confidence=0.95):
     """
     Perform F-test to compare variances of two independent samples 
     grouped by a categorical column.
     """
-    # Remove rows where the categorical column is NaN (avoids later pitfalls)
     df_clean = df.dropna(subset=[cat_col])
     categories = df_clean[cat_col].unique()
     group1_name, group2_name = categories[0], categories[1]
 
-    # Single mask – only one boolean series constructed
     mask = df_clean[cat_col] == group1_name
 
     data1 = df_clean.loc[mask, num_col].dropna()
@@ -50,7 +84,6 @@ def perform_ftest(df, num_col, cat_col, alternative='two-sided', confidence=0.95
     code = "import numpy as np\n"
     code += "from scipy.stats import f\n\n"
     
-    # Clean docstring for the user
     code += f"# Drop rows with missing values in '{cat_col}' and filter groups\n"
     code += f"df_clean = df.dropna(subset=['{cat_col}'])\n"
     code += f"mask = df_clean['{cat_col}'] == '{group1_name}'\n"
@@ -83,48 +116,21 @@ def perform_levene(df, num_col, cat_col, confidence=0.95):
     Perform Levene's test for equal variances and compute a bootstrap confidence
     interval for the ratio of variances.
     """
-    # Clean categorical NaN rows early
     df_clean = df.dropna(subset=[cat_col])
     categories = df_clean[cat_col].unique()
     group1_name, group2_name = categories[0], categories[1]
 
-    # Single mask + negation (same as F‑test)
     mask = df_clean[cat_col] == group1_name
-    data1_full = df_clean.loc[mask, num_col].dropna().to_numpy()
-    data2_full = df_clean.loc[~mask, num_col].dropna().to_numpy()
+    data1_full = df_clean.loc[mask, num_col].dropna()
+    data2_full = df_clean.loc[~mask, num_col].dropna()
 
-    # Levene's test on the full data (fast enough for 250k rows)
+    # Levene's test
     stat, p_value = stats.levene(data1_full, data2_full, center='median')
 
-    # ---------- Bootstrap confidence interval with safety undersampling ----------
-    n1, n2 = len(data1_full), len(data2_full)
-    total_len = n1 + n2
-    is_sampled = False
-
-    if total_len > BOOTSTRAP_SAFETY_LIMIT:
-        is_sampled = True
-        frac = BOOTSTRAP_SAFETY_LIMIT / total_len
-        data1_boot = data1_full.sample(frac=frac, random_state=42)
-        data2_boot = data2_full.sample(frac=frac, random_state=42)
-        
-        # String for code generation – will be filled with actual numbers
-        sampling_code = (
-            f"# Sampling for bootstrap CI (safety limit = {BOOTSTRAP_SAFETY_LIMIT})\n"
-            f"total_len = len(data1) + len(data2)\n"
-            f"if total_len > {BOOTSTRAP_SAFETY_LIMIT}:\n"
-            f"    frac = {BOOTSTRAP_SAFETY_LIMIT} / total_len\n"
-            f"    data1_ci = data1.sample(frac=frac, random_state=42)\n"
-            f"    data2_ci = data2.sample(frac=frac, random_state=42)\n"
-            f"else:\n"
-            f"    data1_ci, data2_ci = data1, data2\n"
-        )
-    else:
-        data1_boot = data1_full
-        data2_boot = data2_full
-        sampling_code = (
-            "# No sampling required (total observations ≤ {})\n".format(BOOTSTRAP_SAFETY_LIMIT) +
-            "data1_ci, data2_ci = data1, data2\n"
-        )
+    # ---------- Bootstrap CI with Refactored Safety Undersampling ----------
+    data1_boot, data2_boot, is_sampled, sampling_code = apply_safety_sampling(
+        data1_full, data2_full, var1_name="data1", var2_name="data2"
+    )
 
     boot_data = (data1_boot, data2_boot)
     ci = stats.bootstrap(
@@ -143,8 +149,8 @@ def perform_levene(df, num_col, cat_col, confidence=0.95):
     code += "# Data preparation\n"
     code += f"df_clean = df.dropna(subset=['{cat_col}'])\n"
     code += f"mask = df_clean['{cat_col}'] == '{group1_name}'\n"
-    code += f"data1 = df_clean.loc[mask, '{num_col}'].dropna().to_numpy()\n"
-    code += f"data2 = df_clean.loc[~mask, '{num_col}'].dropna().to_numpy()\n\n"
+    code += f"data1 = df_clean.loc[mask, '{num_col}'].dropna()\n"
+    code += f"data2 = df_clean.loc[~mask, '{num_col}'].dropna()\n\n"
     
     code += "stat, p_value = stats.levene(data1, data2, center='median')\n"
     code += "print(f'Levene statistic: {stat:.4f}')\n"
@@ -168,8 +174,6 @@ def plot_confidence_interval(low, high, estimated_value, title="Confidence Inter
     x_label="", y_label="", H0=0):
     """
     Generates a Forest Plot for a confidence interval.
-    The null hypothesis value (H0) is plotted as a vertical reference line.
-    Returns the figure and the equivalent Python code as a string.
     """
     left_dist = estimated_value - low
     right_dist = high - estimated_value
@@ -257,26 +261,18 @@ def perform_mannwhitney(df, num_col, cat_col, alternative='two-sided', confidenc
     group1, group2 = categories[0], categories[1]
 
     mask = df_clean[cat_col] == group1
-    x1_full = df_clean.loc[mask, num_col].dropna().to_numpy()
-    x2_full = df_clean.loc[~mask, num_col].dropna().to_numpy()
+    x1_full = df_clean.loc[mask, num_col].dropna()
+    x2_full = df_clean.loc[~mask, num_col].dropna()
 
     # Mann-Whitney test (fast, full data)
     res = stats.mannwhitneyu(x1_full, x2_full, alternative=alternative)
     u_stat = res.statistic
     p_val = res.pvalue
 
-    # ---------- Bootstrap CI with safety undersampling ----------
-    n1, n2 = len(x1_full), len(x2_full)
-    total_len = n1 + n2
-    is_sampled = False
-
-    if total_len > BOOTSTRAP_SAFETY_LIMIT:
-        is_sampled = True
-        frac = BOOTSTRAP_SAFETY_LIMIT / total_len
-        x1_boot = x1_full.sample(frac=frac, random_state=42)
-        x2_boot = x2_full.sample(frac=frac, random_state=42)
-    else:
-        x1_boot, x2_boot = x1_full, x2_full
+    # ---------- Bootstrap CI with Refactored Safety Undersampling ----------
+    x1_boot, x2_boot, is_sampled, sampling_code = apply_safety_sampling(
+        x1_full, x2_full, var1_name="x1", var2_name="x2"
+    )
 
     boot_data = (x1_boot, x2_boot)
     ci_obj = stats.bootstrap(
@@ -288,28 +284,18 @@ def perform_mannwhitney(df, num_col, cat_col, alternative='two-sided', confidenc
     ).confidence_interval
     ci_tuple = (ci_obj.low, ci_obj.high)
 
-    # Code snippet – includes sampling logic if applicable
     code = "import numpy as np\nfrom scipy import stats\n\n"
     code += "# Data preparation\n"
     code += f"df_clean = df.dropna(subset=['{cat_col}'])\n"
     code += f"mask = df_clean['{cat_col}'] == '{group1}'\n"
-    code += f"x1 = df_clean.loc[mask, '{num_col}'].dropna().to_numpy()\n"
-    code += f"x2 = df_clean.loc[~mask, '{num_col}'].dropna().to_numpy()\n\n"
+    code += f"x1 = df_clean.loc[mask, '{num_col}'].dropna()\n"
+    code += f"x2 = df_clean.loc[~mask, '{num_col}'].dropna()\n\n"
     code += f"res = stats.mannwhitneyu(x1, x2, alternative='{alternative}')\n"
     code += "print(f'U-statistic: {res.statistic:.4f}')\n"
     code += "print(f'p-value: {res.pvalue:.4f}')\n\n"
 
-    if is_sampled:
-        code += f"# Safety undersampling for bootstrap CI (limit = {BOOTSTRAP_SAFETY_LIMIT})\n"
-        code += f"total_len = len(x1) + len(x2)\n"
-        code += f"# (same logic as in the app)\n"
-        code += f"frac = {BOOTSTRAP_SAFETY_LIMIT} / total_len\n"
-        code += f"x1_ci = x1.sample(frac=frac, random_state=42)\n"
-        code += f"x2_ci = x2.sample(frac=frac, random_state=42)\n"
-        code += f"boot_data = (x1_ci, x2_ci)\n"
-    else:
-        code += "boot_data = (x1, x2)  # no sampling needed\n"
-
+    code += sampling_code
+    code += "boot_data = (x1_ci, x2_ci)\n"
     code += "ci_obj = stats.bootstrap(\n"
     code += "    boot_data,\n"
     code += "    lambda x, y, axis=-1: np.median(x, axis=axis) - np.median(y, axis=axis),\n"
