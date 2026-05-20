@@ -11,9 +11,8 @@ from scipy.stats import studentized_range
 def perform_bartlett(df, num_col, cat_col):
     """Perform Bartlett's test for equal variances."""
     # OPTIMIZATION: Single pass grouping
-    grouped = df[[cat_col, num_col]].dropna().groupby(cat_col)[num_col]
+    grouped = df[[cat_col, num_col]].dropna().astype({num_col: float}).groupby(cat_col)[num_col]
     data_arrays = [group.values for name, group in grouped if len(group) > 0]
-    
     stat, p_value = stats.bartlett(*data_arrays)
 
     code = "from scipy import stats\n\n"
