@@ -1,35 +1,56 @@
 import pandas as pd
 import numpy as np
-import chardet
+import charset_normalizer
 
-def detect_encoding(uploaded_file):
-    """Lee los primeros 10KB del archivo para inferir la codificación."""
-    raw_data = uploaded_file.read(10000)
+def detect_encoding(uploaded_file, sample_size=50000):
+    """Lee un fragmento del archivo para inferir la codificación usando charset_normalizer."""
+    raw_data = uploaded_file.read(sample_size)
     uploaded_file.seek(0)
-    result = chardet.detect(raw_data)
+    
+    result = charset_normalizer.detect(raw_data)
     return result['encoding']
 
 def load_dataset(uploaded_file, user_encoding="Auto", separator=","):
     """Carga el dataset manejando codificación y separador."""
     error_msg = None
-    
+    df = None
+    successful_enc = None
+
     if user_encoding == "Auto":
         guessed_enc = detect_encoding(uploaded_file)
-        enc_to_use = guessed_enc if guessed_enc else 'utf-8' 
+        primary_enc = guessed_enc if guessed_enc else 'utf-8'
+        encodings_to_try = [primary_enc, 'utf-8', 'latin-1', 'cp1252']
+        encodings_to_try = list(dict.fromkeys(encodings_to_try))
     else:
-        enc_to_use = user_encoding
+        encodings_to_try = [user_encoding]
 
-    code = f"import pandas as pd\n"
-    code += f"df = pd.read_csv('{uploaded_file.name}', encoding='{enc_to_use}', sep={repr(separator)})\n"
+    for current_enc in encodings_to_try:
+        try:
+            uploaded_file.seek(0)
+            df = pd.read_csv(uploaded_file, encoding=current_enc, sep=separator)
+            successful_enc = current_enc
+            error_msg = None
+            break 
+            
+        except UnicodeDecodeError:
+            continue
+            
+        except Exception as e:
+            error_msg = f"Error: {str(e)}"
+            break
 
-    try:
-        df = pd.read_csv(uploaded_file, encoding=enc_to_use, sep=separator)
-    except Exception as e:
-        df = None
-        error_msg = str(e)
-        uploaded_file.seek(0)
+    if df is None:
+        code = ""
+        if not error_msg: 
+            error_msg = "It was not possible to decode the file with the provided encodings. Please try a different encoding or check the file format."
+        successful_enc = user_encoding 
+    else:
+        code = f"import pandas as pd\n"
+        code += f"df = pd.read_csv('{uploaded_file.name}', encoding='{successful_enc}', sep={repr(separator)})\n"
 
-    return df, code, error_msg, enc_to_use
+    uploaded_file.seek(0) # Siempre dejamos el puntero en 0 por buenas prácticas
+
+    return df, code, error_msg, successful_enc
 
 def get_numeric_columns(df):
     """Returns a list of column names that contain numeric data."""
