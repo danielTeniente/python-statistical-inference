@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 from gui.components import show_code
 from logic.basic_code import get_numeric_columns, get_categorical_columns
 from logic.twopop_logic import (
@@ -92,6 +93,21 @@ def render_twopop_means_page():
             "Confidence level", 0.80, 0.99, 0.95, 0.01, key="tp_conf"
         )
     equal_var = st.checkbox("Assume equal variances", value=True, key="tp_eq_var")
+
+    st.text("🔍 Data Filtering Code")
+    filter_code = (
+        f"# Assuming 'df' is your loaded pandas DataFrame\n"
+        f"selected_categories = {selected_categories}\n"
+        f"filtered_df = df[df['{selected_cat_col}'].isin(selected_categories)].copy()\n"
+        f"# df = filtered_df  # Use this filtered dataframe for your analysis\n"
+    )
+    # If the column is categorical, add the line that removes unused categories
+    if isinstance(df[selected_cat_col].dtype, pd.CategoricalDtype):
+        filter_code += (
+            f"# Remove unused categories (safety step for categorical columns)\n"
+            f"filtered_df['{selected_cat_col}'] = filtered_df['{selected_cat_col}'].cat.remove_unused_categories()\n"
+        )
+    show_code(filter_code)
 
     cat_str = "_".join(str(c) for c in selected_categories)
     current_context_id = (

@@ -189,7 +189,7 @@ def plot_confidence_interval(low, high, estimated_value, title="Confidence Inter
                 markersize=10, 
                 capsize=8, 
                 linewidth=2,
-                label='Estimate (95% CI)')
+                label='Estimate (CI)')
 
     ax.set_yticks([0])
     ax.set_yticklabels([y_label], fontsize=12)
@@ -210,7 +210,7 @@ def plot_confidence_interval(low, high, estimated_value, title="Confidence Inter
     code += "right_dist = ci_upper - estimated_value\n\n"
     code += "fig, ax = plt.subplots(figsize=(8, 3))\n"
     code += f"ax.axvline(x={H0}, color='red', linestyle='--', linewidth=2, label='H₀ (Equal)')\n"
-    code += "ax.errorbar(x=estimated_value, y=0, xerr=[[left_dist], [right_dist]], fmt='o', color='#1f77b4', markersize=10, capsize=8, linewidth=2, label='Estimate (95% CI)')\n"
+    code += "ax.errorbar(x=estimated_value, y=0, xerr=[[left_dist], [right_dist]], fmt='o', color='#1f77b4', markersize=10, capsize=8, linewidth=2, label='Estimate (CI)')\n"
     code += "ax.set_yticks([0])\n"
     code += f"ax.set_yticklabels(['{y_label}'], fontsize=12)\n"
     code += "ax.set_ylim(-0.5, 0.5)\n"

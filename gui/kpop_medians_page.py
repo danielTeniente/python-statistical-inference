@@ -71,23 +71,21 @@ def render_kpop_medians_page():
 
     confidence = st.slider("Confidence level", 0.80, 0.99, 0.95, 0.01)
 
-    # ------------------------------------------------------------------
-    # NEW: Show reproducible filter code to the student
-    # ------------------------------------------------------------------
-    with st.expander("🔍 Data Filtering Code", expanded=False):
-        filter_code = (
-            f"# Assuming 'df' is your loaded pandas DataFrame\n"
-            f"selected_categories = {selected_categories}\n"
-            f"filtered_df = df[df['{selected_cat_col}'].isin(selected_categories)].copy()\n"
+    st.text("🔍 Data Filtering Code")
+    filter_code = (
+        f"# Assuming 'df' is your loaded pandas DataFrame\n"
+        f"selected_categories = {selected_categories}\n"
+        f"filtered_df = df[df['{selected_cat_col}'].isin(selected_categories)].copy()\n"
+        f"# df = filtered_df  # Use this filtered dataframe for your analysis\n"
+    )
+    # If the column is categorical, add the line that removes unused categories
+    if isinstance(df[selected_cat_col].dtype, pd.CategoricalDtype):
+        filter_code += (
+            f"# Remove unused categories (safety step for categorical columns)\n"
+            f"filtered_df['{selected_cat_col}'] = filtered_df['{selected_cat_col}'].cat.remove_unused_categories()\n"
         )
-        # If the column is categorical, add the line that removes unused categories
-        if isinstance(df[selected_cat_col].dtype, pd.CategoricalDtype):
-            filter_code += (
-                f"# Remove unused categories (safety step for categorical columns)\n"
-                f"filtered_df['{selected_cat_col}'] = filtered_df['{selected_cat_col}'].cat.remove_unused_categories()\n"
-            )
-        show_code(filter_code)
-
+    show_code(filter_code)
+    
     # --- 3. Context Identification & State Management ---
     current_id = f"{selected_num_col}_{selected_cat_col}_{sorted(selected_categories)}_{confidence}"
     

@@ -62,7 +62,7 @@ def render_twoprop_test_page():
         success_term = st.selectbox("Value for 'Success'", options=unique_vals, key="twoprop_success")
         confidence = st.slider("Confidence level", 0.80, 0.99, 0.95, 0.01, key="twoprop_conf")
     
-    alternative = st.selectbox("Alternative hypothesis", ["two-sided", "larger", "smaller"], key="twoprop_alt")
+    alternative = st.selectbox("Alternative hypothesis", ["two-sided", "greater", "less"], key="twoprop_alt")
 
     # --- 4. Context ID and Cache Management ---
     current_id = f"{group_col}_{outcome_col}_{success_term}_{confidence}_{alternative}"

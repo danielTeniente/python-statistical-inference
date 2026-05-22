@@ -17,15 +17,14 @@ def perform_one_proportion_binomial_test(df, selected_column, p0=0.5, alternativ
     trials = len(df)
     result = binomtest(successes, trials, p=p0, alternative=alternative)
     
-    code = f"""from scipy.stats import binomtest
-
-            {code_successes}
-            trials = len(df)
-            result = binomtest(successes, trials, p={p0}, alternative='{alternative}')
-
-            print(f'Statistic: {{result.statistic:.4f}}')
-            print(f'P-value: {{result.pvalue:.4f}}')
-            """
+    code = (
+        "from scipy.stats import binomtest\n\n"
+        f"{code_successes}\n"
+        "trials = len(df)\n"
+        f"result = binomtest(successes, trials, p={p0}, alternative='{alternative}')\n\n"
+        "print(f'Statistic: {result.statistic:.4f}')\n"
+        "print(f'P-value: {result.pvalue:.4f}')\n"
+    )
     return result.statistic, result.pvalue, code
 
 def perform_one_proportion_ztest(df, selected_column, p0=0.5, alternative='two-sided', success_term=None):
@@ -38,17 +37,24 @@ def perform_one_proportion_ztest(df, selected_column, p0=0.5, alternative='two-s
         code_successes = f"successes = df['{selected_column}'].sum()"
         
     trials = len(df)
-    statistic, p_value = proportions_ztest(successes, trials, value=p0, alternative=alternative)
 
-    code = f"""from statsmodels.stats.proportion import proportions_ztest
+    if alternative == 'less':
+        alt_param = 'smaller'
+    elif alternative == 'greater':
+        alt_param = 'larger'
+    else:
+        alt_param = 'two-sided'
 
-            {code_successes}
-            trials = len(df)
-            statistic, p_value = proportions_ztest(successes, trials, value={p0}, alternative='{alternative}')
+    statistic, p_value = proportions_ztest(successes, trials, value=p0, alternative=alt_param)
 
-            print(f'Z-Statistic: {{statistic:.4f}}')
-            print(f'P-value: {{p_value:.4f}}')
-            """
+    code = (
+        "from statsmodels.stats.proportion import proportions_ztest\n\n"
+        f"{code_successes}\n"
+        "trials = len(df)\n"
+        f"statistic, p_value = proportions_ztest(successes, trials, value={p0}, alternative='{alt_param}')\n\n"
+        "print(f'Z-Statistic: {statistic:.4f}')\n"
+        "print(f'P-value: {p_value:.4f}')\n"
+    )
     return statistic, p_value, code
 
 def get_one_proportion_interval(df, selected_column, method='wilson', confidence=0.95, success_term=None):
@@ -73,14 +79,13 @@ def get_one_proportion_interval(df, selected_column, method='wilson', confidence
     alpha_val = 1 - confidence
     lower, upper = proportion_confint(successes, trials, alpha=alpha_val, method=method)
 
-    code = f"""from statsmodels.stats.proportion import proportion_confint
-
-            {code_successes}
-            trials = len(df)
-            lower, upper = proportion_confint(successes, trials, alpha={alpha_val:.4f}, method='{method}')
-
-            print(f'{method_display_name} Confidence Interval: ({{lower:.4f}}, {{upper:.4f}})')
-            """
+    code = (
+        "from statsmodels.stats.proportion import proportion_confint\n\n"
+        f"{code_successes}\n"
+        "trials = len(df)\n"
+        f"lower, upper = proportion_confint(successes, trials, alpha={alpha_val:.4f}, method='{method}')\n\n"
+        f"print(f'{method_display_name} Confidence Interval: ({{lower:.4f}}, {{upper:.4f}})')\n"
+    )
     return (lower, upper), code
 
 #################
@@ -106,21 +111,25 @@ def perform_two_proportion_ztest(df, group_col, outcome_col, alternative='two-si
     successes = stats.loc[[group1_name, group2_name], 'sum'].values
     trials = stats.loc[[group1_name, group2_name], 'count'].values
     
-    statistic, p_value = proportions_ztest(successes, trials, alternative=alternative)
+    #alternative : str in ['two-sided', 'smaller', 'larger']
+    if alternative == 'less':
+        alt_param = 'smaller'
+    elif alternative == 'greater':
+        alt_param = 'larger'
+    else:
+        alt_param = 'two-sided'
+    statistic, p_value = proportions_ztest(successes, trials, alternative=alt_param)
 
-    code = f"""import numpy as np
-    from statsmodels.stats.proportion import proportions_ztest
-
-    {code_stats}
-
-    successes = stats.loc[['{group1_name}', '{group2_name}'], 'sum'].values
-    trials = stats.loc[['{group1_name}', '{group2_name}'], 'count'].values
-
-    statistic, p_value = proportions_ztest(successes, trials, alternative='{alternative}')
-
-    print(f'Z-Statistic: {{statistic:.4f}}')
-    print(f'P-value: {{p_value:.4f}}')
-    """
+    code = (
+        "import numpy as np\n"
+        "from statsmodels.stats.proportion import proportions_ztest\n\n"
+        f"{code_stats}\n\n"
+        f"successes = stats.loc[['{group1_name}', '{group2_name}'], 'sum'].values\n"
+        f"trials = stats.loc[['{group1_name}', '{group2_name}'], 'count'].values\n\n"
+        f"statistic, p_value = proportions_ztest(successes, trials, alternative='{alt_param}')\n\n"
+        "print(f'Z-Statistic: {statistic:.4f}')\n"
+        "print(f'P-value: {p_value:.4f}')\n"
+    )
     return statistic, p_value, code
 
 def get_two_proportion_confint(df, group_col, outcome_col, method='newcomb', confidence=0.95, success_term=None):
@@ -148,20 +157,17 @@ def get_two_proportion_confint(df, group_col, outcome_col, method='newcomb', con
         method=method, compare='diff', alpha=alpha
     )
 
-    code = f"""import numpy as np
-    from statsmodels.stats.proportion import confint_proportions_2indep
-
-    {code_stats}
-
-    successes = stats.loc[['{group1_name}', '{group2_name}'], 'sum'].values
-    trials = stats.loc[['{group1_name}', '{group2_name}'], 'count'].values
-
-    lower, upper = confint_proportions_2indep(
-        successes[0], trials[0], 
-        successes[1], trials[1], 
-        method='{method}', compare='diff', alpha={alpha:.4f}
+    code = (
+        "import numpy as np\n"
+        "from statsmodels.stats.proportion import confint_proportions_2indep\n\n"
+        f"{code_stats}\n\n"
+        f"successes = stats.loc[['{group1_name}', '{group2_name}'], 'sum'].values\n"
+        f"trials = stats.loc[['{group1_name}', '{group2_name}'], 'count'].values\n\n"
+        "lower, upper = confint_proportions_2indep(\n"
+        "    successes[0], trials[0], \n"
+        "    successes[1], trials[1], \n"
+        f"    method='{method}', compare='diff', alpha={alpha:.4f}\n"
+        ")\n\n"
+        f"print(f'{method.title()} Confidence Interval for Difference in Proportions: ({{lower:.4f}}, {{upper:.4f}})')\n"
     )
-
-    print(f'{method.title()} Confidence Interval for Difference in Proportions: ({{lower:.4f}}, {{upper:.4f}})')
-    """
     return (lower, upper), code

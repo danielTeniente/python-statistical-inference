@@ -25,8 +25,8 @@ def render_normality_test_page():
         selected_col = st.selectbox("Select variable", numeric_cols, key="norm_sel_col")
     with col2:
         test_name = st.selectbox("Select test", 
-            ["Shapiro–Wilk", "D’Agostino–Pearson", 
-             "Kolmogorov–Smirnov", "Anderson-Darling"], key="norm_sel_test")
+            ["Shapiro-Wilk", "D'Agostino-Pearson", 
+             "Kolmogorov-Smirnov", "Anderson-Darling"], key="norm_sel_test")
 
     # --- 3. Context ID and State Management ---
     # Create a unique ID for the current selection

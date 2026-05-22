@@ -8,7 +8,6 @@ from logic.kpop_logic import (
     perform_pairwise_gameshowell
 )
 
-# --- NUEVA OPTIMIZACIÓN: Caché de filtrado ---
 @st.cache_data(show_spinner=False)
 def filter_kpop_means_data(df, cat_col, selected_cats):
     """Caches the heavy Pandas filtering operation to avoid repeating it on multiple button clicks."""
@@ -72,6 +71,21 @@ def render_kpop_means_page():
 
     confidence = st.slider("Confidence level", 0.80, 0.99, 0.95, 0.01)
     equal_var = st.checkbox("Assume equal variances", value=True, key="equal_var")
+
+    st.text("🔍 Data Filtering Code")
+    filter_code = (
+        f"# Assuming 'df' is your loaded pandas DataFrame\n"
+        f"selected_categories = {selected_categories}\n"
+        f"filtered_df = df[df['{selected_cat_col}'].isin(selected_categories)].copy()\n"
+        f"# df = filtered_df  # Use this filtered dataframe for your analysis\n"
+    )
+    # If the column is categorical, add the line that removes unused categories
+    if isinstance(df[selected_cat_col].dtype, pd.CategoricalDtype):
+        filter_code += (
+            f"# Remove unused categories (safety step for categorical columns)\n"
+            f"filtered_df['{selected_cat_col}'] = filtered_df['{selected_cat_col}'].cat.remove_unused_categories()\n"
+        )
+    show_code(filter_code)
 
     # --- 3. Context ID and Cache Invalidation ---
     # Create a unique ID based on all parameters that affect the results
