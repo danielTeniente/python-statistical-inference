@@ -45,87 +45,87 @@ def change_page(page_name):
 # --- SIDEBAR NAVIGATION ---
 st.sidebar.title("Navigation")
 
-if st.sidebar.button("Upload Dataset", use_container_width=True):
+if st.sidebar.button("Upload Dataset", width='stretch'):
     change_page("Upload Dataset")
 
 with st.sidebar.expander("Data Transformation", expanded=False):
-    if st.button("Change Data Types", use_container_width=True):
+    if st.button("Change Data Types", width='stretch'):
         change_page('Change Data Types')
 
-    if st.button("Create Categorical Variable", use_container_width=True):
+    if st.button("Create Categorical Variable", width='stretch'):
         change_page("Create Categorical Variable")
 
-    if st.button("Clean Data", use_container_width=True):
+    if st.button("Clean Data", width='stretch'):
         change_page("Clean Data")
 
 with st.sidebar.expander("Descriptive Statistics", expanded=False):
     # Subsección: Variables Numéricas
-    if st.button("Numerical Variables", use_container_width=True):
+    if st.button("Numerical Variables", width='stretch'):
         change_page("Descriptive - Numerical")
         
     # Subsección: Variables Categóricas (labels a, b, c)
-    if st.button("Categorical Variables", use_container_width=True):
+    if st.button("Categorical Variables", width='stretch'):
         change_page("Descriptive - Categorical")
         
 with st.sidebar.expander("Normality Tests", expanded=False):
-    if st.button("Whole Sample Normality", use_container_width=True):
+    if st.button("Whole Sample Normality", width='stretch'):
         change_page("Whole Sample Normality")
-    if st.button("Normality Tests by Group", use_container_width=True):
+    if st.button("Normality Tests by Group", width='stretch'):
         change_page("Normality Tests by Group")
 
 with st.sidebar.expander("One-Sample Tests", expanded=False):
-    if st.button("One-Sample Mean Test", use_container_width=True):
+    if st.button("One-Sample Mean Test", width='stretch'):
         change_page("One-Sample Mean Test")
-    if st.button("One-Sample Median Test", use_container_width=True):
+    if st.button("One-Sample Median Test", width='stretch'):
         change_page("One-Sample Median Test")
 
 with st.sidebar.expander("Two-Sample Tests", expanded=False):
-    if st.button("Two-Sample Variance Tests", use_container_width=True):
+    if st.button("Two-Sample Variance Tests", width='stretch'):
         change_page("Two-Sample Variance Tests")
-    if st.button("Two-Sample Mean Tests", use_container_width=True):
+    if st.button("Two-Sample Mean Tests", width='stretch'):
         change_page("Two-Sample Mean Tests")
-    if st.button("Two-Sample Median Tests", use_container_width=True):
+    if st.button("Two-Sample Median Tests", width='stretch'):
         change_page("Two-Sample Median Tests")
 
 with st.sidebar.expander("k-Sample Tests", expanded=False):
-    if st.button("k-Sample Variance Tests", use_container_width=True):
+    if st.button("k-Sample Variance Tests", width='stretch'):
         change_page("k-Sample Variance Tests")
-    if st.button("k-Sample Mean Tests", use_container_width=True):
+    if st.button("k-Sample Mean Tests", width='stretch'):
         change_page("k-Sample Mean Tests")
-    if st.button("k-Sample Median Tests", use_container_width=True):
+    if st.button("k-Sample Median Tests", width='stretch'):
         change_page("k-Sample Median Tests")
 
 with st.sidebar.expander("One-vs-Rest Tests", expanded=False):
-    if st.button("One-vs-Rest Normality Tests", use_container_width=True):
+    if st.button("One-vs-Rest Normality Tests", width='stretch'):
         change_page("One-vs-Rest Normality Tests")
-    if st.button("One-vs-Rest Variance Tests", use_container_width=True):
+    if st.button("One-vs-Rest Variance Tests", width='stretch'):
         change_page("One-vs-Rest Variance Tests")
-    if st.button("One-vs-Rest Mean Tests", use_container_width=True):
+    if st.button("One-vs-Rest Mean Tests", width='stretch'):
         change_page("One-vs-Rest Mean Tests")
-    if st.button("One-vs-Rest Median Tests", use_container_width=True):
+    if st.button("One-vs-Rest Median Tests", width='stretch'):
         change_page("One-vs-Rest Median Tests")
 
 with st.sidebar.expander("Proportion Tests", expanded=False):
-    if st.button("One-Proportion Test", use_container_width=True):
+    if st.button("One-Proportion Test", width='stretch'):
         change_page("One-Proportion Test")
-    if st.button("Two-Proportions Test", use_container_width=True):
+    if st.button("Two-Proportions Test", width='stretch'):
         change_page("Two-Proportions Test")
-    if st.button("K Proportions Test", use_container_width=True):
+    if st.button("K Proportions Test", width='stretch'):
         change_page("K Proportions Test")
 
 with st.sidebar.expander("Association and Independence Tests", expanded=False):
-    if st.button("Tests of Independence", use_container_width=True):
+    if st.button("Tests of Independence", width='stretch'):
         change_page("Tests of Independence")
-    if st.button('Measures of Association', use_container_width=True):
+    if st.button('Measures of Association', width='stretch'):
         change_page("Measures of Association")
 
 with st.sidebar.expander("Correlation Analysis", expanded=False):
-    if st.button("Correlation Analysis", use_container_width=True):
+    if st.button("Correlation Analysis", width='stretch'):
         change_page("Correlation Analysis")
-    if st.button("Correlation Matrix Heatmap", use_container_width=True):
+    if st.button("Correlation Matrix Heatmap", width='stretch'):
         change_page("Correlation Matrix Heatmap")        
 
-if st.sidebar.button("About", use_container_width=True):
+if st.sidebar.button("About", width='stretch'):
     change_page("About")
 
 

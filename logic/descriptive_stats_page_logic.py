@@ -37,6 +37,11 @@ def get_std(df, column):
     code = f"df['{column}'].std()\n"
     return df[column].std(), code
 
+def get_kurtosis(df, column):
+    """Returns the kurtosis of a specified column."""
+    code = f"df['{column}'].kurtosis()\n"
+    return df[column].kurtosis(), code
+
 def get_variance(df, column):
     """Returns the variance of a specified column."""
     code = f"df['{column}'].var()\n"

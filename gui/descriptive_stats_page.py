@@ -5,7 +5,7 @@ from logic.descriptive_stats_page_logic import (
     get_sample_size, get_dataset_size, get_mean, 
     get_median, get_mode, get_std, get_variance,
     get_min, get_max, get_range, get_quartiles,
-    get_iqr, get_skewness
+    get_iqr, get_skewness, get_kurtosis
 )
 from gui.components import show_code
 
@@ -57,13 +57,14 @@ def render_descriptive_numerical_page():
 
     if state["summary"]:
         res = state["summary"]
-        st.markdown("**Sample size of the dataset**")
+        st.markdown("**Sample size (number of rows)**")
+        st.metric(label="", value=res["size"])
         show_code(res["size_code"])
-        st.markdown(f"Sample size: **{res['size']}**")
 
         st.markdown("**Shape of the dataset (rows, columns)**")
+        st.metric(label="Number of Columns", value=res["shape"][1])
+        st.metric(label="Number of Rows", value=res["shape"][0])
         show_code(res["shape_code"])
-        st.markdown(f"Dataset size: **{res['shape']}**")
 
         st.markdown("**Summary table**")
         show_code(res["desc_code"])
@@ -95,11 +96,11 @@ def render_descriptive_numerical_page():
             q, qc = get_quartiles(df, selected_column)
             i, ic = get_iqr(df, selected_column)
             sk, skc = get_skewness(df, selected_column)
-
+            k, kc = get_kurtosis(df, selected_column)
             state["individual"] = {
                 "mean": (m, mc), "median": (med, medc), "mode": (mo, moc),
                 "std": (sd, sdc), "var": (v, vc), "min": (mi, mic), "max": (ma, mac),
-                "range": (r, rc), "quartiles": (list(q), qc), "iqr": (i, ic), "skew": (sk, skc)
+                "range": (r, rc), "quartiles": (list(q), qc), "iqr": (i, ic), "skew": (sk, skc), "kurtosis": (k, kc)
             }
 
     if state["individual"]:
@@ -107,45 +108,47 @@ def render_descriptive_numerical_page():
         
         c1, c2, c3 = st.columns(3)
         with c1:
+            st.metric("Mean", f"{res['mean'][0]:.4f}")
             show_code(res["mean"][1])
-            st.markdown(f"Mean: **{res['mean'][0]}**")
         with c2:
+            st.metric("Median", f"{res['median'][0]:.4f}")
             show_code(res["median"][1])
-            st.markdown(f"Median: **{res['median'][0]}**")
         with c3:
+            st.metric("Mode", f"{res['mode'][0]:.4f}")
             show_code(res["mode"][1])
-            st.markdown(f"Mode: **{res['mode'][0]}**")
 
         c1, c2 = st.columns(2)
         with c1:
+            st.metric("Standard Deviation", f"{res['std'][0]:.4f}")
             show_code(res["std"][1])
-            st.markdown(f"Standard Deviation: **{res['std'][0]}**")
         with c2:
+            st.metric("Variance", f"{res['var'][0]:.4f}")
             show_code(res["var"][1])
-            st.markdown(f"Variance: **{res['var'][0]}**")
 
         c1, c2 = st.columns(2)
         with c1:
+            st.metric("Minimum", f"{res['min'][0]:.4f}")
             show_code(res["min"][1])
-            st.markdown(f"Minimum: **{res['min'][0]}**")
         with c2:
+            st.metric("Maximum", f"{res['max'][0]:.4f}")
             show_code(res["max"][1])
-            st.markdown(f"Maximum: **{res['max'][0]}**")
 
         c1, c2, c3 = st.columns(3)
         with c1:
+            st.metric("Range", f"{res['range'][0]:.4f}")
             show_code(res["range"][1])
-            st.markdown(f"Range: **{res['range'][0]}**")
         with c2:
-            show_code(res["quartiles"][1])
             qs = res["quartiles"][0]
             st.markdown(f"Quartiles: \n- Q1: **{qs[0]}**\n- Q2: **{qs[1]}**\n- Q3: **{qs[2]}**")
+            show_code(res["quartiles"][1])
         with c3:
+            st.metric("IQR", f"{res['iqr'][0]:.4f}")
             show_code(res["iqr"][1])
-            st.markdown(f"IQR: **{res['iqr'][0]}**")
 
+        st.metric("Skewness", f"{res['skew'][0]:.4f}")
         show_code(res["skew"][1])
-        st.markdown(f"Skewness: **{res['skew'][0]}**")
+        st.metric("Kurtosis", f"{res['kurtosis'][0]:.4f}")
+        show_code(res["kurtosis"][1])
 
     st.divider()
 

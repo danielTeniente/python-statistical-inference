@@ -81,7 +81,6 @@ def render_kpop_variances_page():
         )
     show_code(filter_code)
 
-
     # --- 3. Context ID and State Management ---
     # Generate unique ID based on selections to detect changes
     current_context_id = f"{selected_num_col}_{selected_cat_col}_{sorted(selected_categories)}"

@@ -7,13 +7,15 @@ ConfidenceInterval = namedtuple('ConfidenceInterval', ['low', 'high'])
 
 def perform_ttest_with_ci(df,col, popmean=1.75, alternative='two-sided', confidence=0.95):
     """Perform one-sample t-test on the specified column of the DataFrame."""
-    res =  stats.ttest_1samp(df[col], 
+    data = df[col].dropna()
+    res =  stats.ttest_1samp(data, 
         popmean=popmean, alternative=alternative)
-    ci = stats.t.interval(confidence, len(df[col])-1, 
-        loc=df[col].mean(), scale=stats.sem(df[col]))
+    ci = stats.t.interval(confidence, len(data)-1, 
+        loc=data.mean(), scale=stats.sem(data))
     code = "from scipy import stats \n"
-    code += f"res = stats.ttest_1samp(df['{col}'], popmean={popmean}, alternative='{alternative}')\n"
-    code += f"ci = stats.t.interval({confidence}, len(df['{col}'])-1, loc=df['{col}'].mean(), scale=stats.sem(df['{col}']))\n"
+    code += f"data = df['{col}'].dropna()\n"
+    code += f"res = stats.ttest_1samp(data, popmean={popmean}, alternative='{alternative}')\n"
+    code += f"ci = stats.t.interval({confidence}, len(data)-1, loc=data.mean(), scale=stats.sem(data))\n"
     code += "print(f't-statistic: {res.statistic:.4f}')\n"
     code += "print(f'p-value: {res.pvalue:.4f}')\n"
     code += "print(f'Confidence Interval: ({ci[0]:.4f}, {ci[1]:.4f})')\n"
