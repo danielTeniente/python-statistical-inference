@@ -141,7 +141,6 @@ def render_twopop_medians_page():
 
         if "mann_whitney" in state:
             res = state["mann_whitney"]
-            show_code(res["code"])
             col1_m, col2_m, col3_m = st.columns(3)
             col1_m.metric("U-statistic", f"{res['u_stat']:.4f}")
             col2_m.metric(f"P-value ({alternative})", f"{res['p_value']:.4f}")
@@ -155,6 +154,7 @@ def render_twopop_medians_page():
                     "ℹ️ The bootstrap confidence interval was computed on a safety-sampled subset "
                     "of the data (proportional stratified sampling) to avoid memory overload."
                 )
+            show_code(res["code"])
 
     with st.expander("📊 2. Visual Analysis (Confidence Interval Plot)", expanded=False):
         if "mann_whitney" not in state:

@@ -143,7 +143,6 @@ def render_twopop_means_page():
 
         if "ttest" in state:
             res = state["ttest"]
-            show_code(res["code"])
             col_m1, col_m2, col_m3 = st.columns(3)
             col_m1.metric("T-statistic", f"{res['stat']:.4f}")
             col_m2.metric(f"P-value ({alternative})", f"{res['p']:.4f}")
@@ -151,6 +150,7 @@ def render_twopop_means_page():
                 "Confidence Interval",
                 f"({res['ci'][0]:.4f}, {res['ci'][1]:.4f})",
             )
+            show_code(res["code"])
 
     with st.expander("📊 2. Confidence Interval Plot", expanded=False):
         if "ttest" not in state:

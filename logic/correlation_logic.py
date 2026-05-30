@@ -39,8 +39,8 @@ def _bootstrap_ci(x, y, method='spearman', n_boot=2000, alpha=0.05, max_bootstra
     return lower, upper
 
 # --- 1. Pearson Correlation ---
-def perform_pearson_correlation(df, var1_col, var2_col):
-    """Performs Pearson correlation test and calculates the 95% Confidence Interval."""
+def perform_pearson_correlation(df, var1_col, var2_col, confidence_level=0.95):
+    """Performs Pearson correlation test and calculates the {confidence_level*100:.0f}% Confidence Interval."""
     # Drop NaNs to prevent scipy errors
     clean_df = df[[var1_col, var2_col]].dropna()
     x = clean_df[var1_col]
@@ -49,7 +49,7 @@ def perform_pearson_correlation(df, var1_col, var2_col):
     result = pearsonr(x, y)
     corr_coeff = result.statistic
     p_value = result.pvalue
-    ci = result.confidence_interval(confidence_level=0.95)
+    ci = result.confidence_interval(confidence_level=confidence_level)
     ci_lower, ci_upper = ci.low, ci.high
     
     code = (
@@ -61,23 +61,23 @@ def perform_pearson_correlation(df, var1_col, var2_col):
         "result = pearsonr(x, y)\n"
         "corr_coeff = result.statistic\n"
         "p_value = result.pvalue\n"
-        "ci = result.confidence_interval(confidence_level=0.95)\n\n"
+        f"ci = result.confidence_interval(confidence_level={confidence_level})\n\n"
         "print(f'Pearson Correlation: {corr_coeff:.4f}')\n"
         "print(f'P-value: {p_value:.4f}')\n"
-        "print(f'95% CI: [{ci.low:.4f}, {ci.high:.4f}]')\n"
+        f"print(f'{{confidence_level*100:.0f}}% CI: [{{ci.low:.4f}}, {{ci.high:.4f}}]')\n"
     )
     
     return corr_coeff, p_value, ci_lower, ci_upper, code
 
 # --- 2. Spearman Rank Correlation ---
-def perform_spearman_correlation(df, var1_col, var2_col, n_boot=2500):
-    """Performs Spearman rank correlation and calculates a Bootstrap 95% Confidence Interval."""
+def perform_spearman_correlation(df, var1_col, var2_col, n_boot=2500, confidence_level=0.95):
+    """Performs Spearman rank correlation and calculates a Bootstrap {confidence_level*100:.0f}% Confidence Interval."""
     clean_df = df[[var1_col, var2_col]].dropna()
     x = clean_df[var1_col].values
     y = clean_df[var2_col].values
     
     corr_coeff, p_value = spearmanr(x, y)
-    ci_lower, ci_upper = _bootstrap_ci(x, y, method='spearman', n_boot=n_boot)
+    ci_lower, ci_upper = _bootstrap_ci(x, y, method='spearman', n_boot=n_boot, alpha=1-confidence_level)
     
     code = (
         "import pandas as pd\n"
@@ -87,7 +87,7 @@ def perform_spearman_correlation(df, var1_col, var2_col, n_boot=2500):
         f"x = clean_df['{var1_col}'].values\n"
         f"y = clean_df['{var2_col}'].values\n\n"
         "corr_coeff, p_value = spearmanr(x, y)\n\n"
-        "# Bootstrap 95% Confidence Interval\n"
+        f"# Bootstrap {{confidence_level*100:.0f}}% Confidence Interval\n"
         "n = len(x)\n"
         "stats = []\n"
         f"for _ in range({n_boot}):\n"
@@ -98,20 +98,20 @@ def perform_spearman_correlation(df, var1_col, var2_col, n_boot=2500):
         "ci_upper = np.percentile(stats, 97.5)\n\n"
         "print(f'Spearman Correlation: {corr_coeff:.4f}')\n"
         "print(f'P-value: {p_value:.4f}')\n"
-        "print(f'95% Bootstrap CI: [{ci_lower:.4f}, {ci_upper:.4f}]')\n"
+        f"print(f'{{confidence_level*100:.0f}}% Bootstrap CI: [{{ci_lower:.4f}}, {{ci_upper:.4f}}]')\n"
     )
     
     return corr_coeff, p_value, ci_lower, ci_upper, code
 
 # --- 3. Kendall Tau Correlation ---
-def perform_kendall_correlation(df, var1_col, var2_col, n_boot=2500):
-    """Performs Kendall Tau correlation test and calculates a Bootstrap 95% Confidence Interval."""
+def perform_kendall_correlation(df, var1_col, var2_col, n_boot=2500, confidence_level=0.95):
+    """Performs Kendall Tau correlation test and calculates a Bootstrap {confidence_level*100:.0f}% Confidence Interval."""
     clean_df = df[[var1_col, var2_col]].dropna()
     x = clean_df[var1_col].values
     y = clean_df[var2_col].values
     
     corr_coeff, p_value = kendalltau(x, y)
-    ci_lower, ci_upper = _bootstrap_ci(x, y, method='kendall', n_boot=n_boot)
+    ci_lower, ci_upper = _bootstrap_ci(x, y, method='kendall', n_boot=n_boot, alpha=1-confidence_level)
     
     code = (
         "import pandas as pd\n"
@@ -121,18 +121,18 @@ def perform_kendall_correlation(df, var1_col, var2_col, n_boot=2500):
         f"x = clean_df['{var1_col}'].values\n"
         f"y = clean_df['{var2_col}'].values\n\n"
         "corr_coeff, p_value = kendalltau(x, y)\n\n"
-        "# Bootstrap 95% Confidence Interval\n"
+        f"# Bootstrap {{confidence_level*100:.0f}}% Confidence Interval\n"
         "n = len(x)\n"
         "stats = []\n"
         f"for _ in range({n_boot}):\n"
         "    idx = np.random.choice(range(n), n, replace=True)\n"
         "    r = kendalltau(x[idx], y[idx])[0]\n"
         "    stats.append(r)\n\n"
-        "ci_lower = np.percentile(stats, 2.5)\n"
-        "ci_upper = np.percentile(stats, 97.5)\n\n"
+        f"ci_lower = np.percentile(stats, {(1 - confidence_level) / 2 * 100})\n"
+        f"ci_upper = np.percentile(stats, {confidence_level * 100 + (1 - confidence_level) / 2 * 100})\n\n"
         "print(f'Kendall Tau: {corr_coeff:.4f}')\n"
         "print(f'P-value: {p_value:.4f}')\n"
-        "print(f'95% Bootstrap CI: [{ci_lower:.4f}, {ci_upper:.4f}]')\n"
+        f"print(f'{{confidence_level*100:.0f}}% Bootstrap CI: [{{ci_lower:.4f}}, {{ci_upper:.4f}}]')\n"
     )
     
     return corr_coeff, p_value, ci_lower, ci_upper, code

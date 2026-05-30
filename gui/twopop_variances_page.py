@@ -154,7 +154,6 @@ def render_twopop_variances_page():
 
             if "ftest" in state:
                 res_f = state["ftest"]
-                show_code(res_f["code"])
                 c1, c2, c3 = st.columns(3)
                 c1.metric("F-statistic", f"{res_f['f_stat']:.4f}")
                 c2.metric(f"P-value ({alternative})", f"{res_f['p_value']:.4f}")
@@ -162,6 +161,7 @@ def render_twopop_variances_page():
                     "Confidence Interval",
                     f"({res_f['ci'][0]:.4f}, {res_f['ci'][1]:.4f})",
                 )
+                show_code(res_f["code"])
 
         # --- LEVENE'S TEST LOGIC ---
         elif selected_test == "Levene's Test for Equality of Variances":
@@ -180,7 +180,6 @@ def render_twopop_variances_page():
 
             if "levene" in state:
                 res_l = state["levene"]
-                show_code(res_l["code"])
                 c1, c2, c3 = st.columns(3)
                 c1.metric("Levene Statistic", f"{res_l['stat']:.4f}")
                 c2.metric("P-value", f"{res_l['p_value']:.4f}")
@@ -193,6 +192,7 @@ def render_twopop_variances_page():
                         "ℹ️ The bootstrap confidence interval was computed on a safety-sampled subset "
                         "of the data (proportional stratified sampling) to avoid memory overload."
                     )
+                show_code(res_l["code"])
 
     # --- 5. Visual Analysis (Independiente del selector) ---
     with st.expander("📊 Visual Analysis (Variance Ratio Plot)", expanded=False):
