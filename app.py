@@ -55,8 +55,8 @@ with st.sidebar.expander("Data Transformation", expanded=False):
     if st.button("Create Categorical Variable", width='stretch'):
         change_page("Create Categorical Variable")
 
-    if st.button("Clean Data", width='stretch'):
-        change_page("Clean Data")
+    if st.button("Clean Text Data", width='stretch'):
+        change_page("Clean Text Data")
 
 with st.sidebar.expander("Descriptive Statistics", expanded=False):
     # Subsección: Variables Numéricas
@@ -208,5 +208,5 @@ elif page == "Create Categorical Variable":
     render_create_categorical_page()
 elif page == "Change Data Types":
     render_change_dtype_page()
-elif page == "Clean Data":
+elif page == "Clean Text Data":
     render_data_cleaning_page()

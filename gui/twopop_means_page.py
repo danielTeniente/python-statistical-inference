@@ -185,7 +185,7 @@ def render_twopop_means_page():
         if "plot" in state:
             res_p = state["plot"]
             st.metric("Sample Difference in Means", f"{res_p['diff']:.4f}")
-            st.markdown("**Sample Difference Logic:**")
+            st.markdown("Sample Difference Logic:")
             show_code(res_p["code_diff"])
             st.pyplot(res_p["fig"])
             st.markdown("**Plotting Logic:**")

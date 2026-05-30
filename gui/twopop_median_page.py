@@ -188,7 +188,7 @@ def render_twopop_medians_page():
         if "plot_data" in state:
             p_res = state["plot_data"]
             st.metric("Sample Difference in Medians", f"{p_res['diff']:.4f}")
-            st.markdown("**Sample Difference Logic:**")
+            st.markdown("Sample Difference Logic:")
             show_code(p_res["code_diff"])
             st.pyplot(p_res["fig"])
             show_code(p_res["code_plot"])

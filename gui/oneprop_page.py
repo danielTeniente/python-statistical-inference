@@ -35,7 +35,7 @@ def get_column_metadata(df, col):
 
 
 def render_oneprop_test_page():
-    st.title("One Proportion Test")
+    st.title("📊 One Proportion Test")
 
     # --- 1. Data Validation ---
     if "df" not in st.session_state or st.session_state.df is None:
@@ -78,8 +78,38 @@ def render_oneprop_test_page():
     
     confidence = st.slider("Confidence level", 0.80, 0.99, 0.95, 0.01, key="one_prop_conf")
 
-    # --- 4. Context ID and State Management ---
-    current_context_id = f"{selected_col}_{p0}_{alternative}_{confidence}_{success_term}"
+    # --- 4. Dynamic Methodology Selection ---
+    st.markdown("### Methodology Setup")
+    
+    col_m1, col_m2 = st.columns(2)
+    with col_m1:
+        test_tooltip = (
+            "**Test Recommendations:**\n\n"
+            "🎯 **Binomial Test (Exact):** Use this for small sample sizes or when your hypothesized proportion is close to 0 or 1. It is always valid.\n\n"
+            "📊 **Z-Test (Normal Approximation):** Use this for large samples where expected successes ($np_0$) and expected failures ($n(1-p_0)$) are at least 10."
+        )
+        selected_test = st.selectbox(
+            "Select Statistical Test",
+            ["Binomial Test (Exact)", "Z-Test (Normal Approximation)"],
+            help=test_tooltip,
+            key="oneprop_test_selector"
+        )
+
+    with col_m2:
+        ci_tooltip = (
+            "**CI Recommendations:**\n\n"
+            "🎯 **Clopper-Pearson (Exact):** Highly conservative. Best for small sample sizes.\n\n"
+            "📊 **Wilson Score:** Often preferred in practice, even for extreme proportions."
+        )
+        selected_ci = st.selectbox(
+            "Select Confidence Interval Method",
+            ["Clopper-Pearson (Exact)", "Wilson Score"],
+            help=ci_tooltip,
+            key="oneprop_ci_selector"
+        )
+
+    # --- 5. Context ID and State Management ---
+    current_context_id = f"{selected_col}_{p0}_{alternative}_{confidence}_{success_term}_{selected_test}_{selected_ci}"
     
     if ("oneprop_state" not in st.session_state or 
         st.session_state.get("oneprop_context_id") != current_context_id):
@@ -91,83 +121,64 @@ def render_oneprop_test_page():
 
     st.divider()
 
-    # --- 5. Granular Execution Sections ---
-
-    # SECTION: Binomial Test
-    with st.expander("Binomial Test (Exact)", expanded=not state.get("binomial")):
-        st.markdown("*Use this exact test for small sample sizes or extreme proportions.*")
-        if st.button("Run Binomial Test", key="btn_run_binomial"):
-            with st.spinner("Computing exact binomial probabilities..."):
-                stat, p_val, code = perform_one_proportion_binomial_test(
-                    df=df, selected_column=selected_col, p0=p0, 
-                    alternative=alternative, success_term=success_term
-                )
-                state["binomial"] = {"stat": stat, "p": p_val, "code": code}
+    # --- 6. Unified Execution Section ---
+    with st.expander(f"🧪 Execution: {selected_test.split('(')[0].strip()} + {selected_ci.split('(')[0].strip()}", expanded=True):
         
-        if "binomial" in state:
-            res_b = state["binomial"]
-            show_code(res_b["code"])
-            bm1, bm2 = st.columns(2)
-            bm1.metric("Success Proportion", f"{res_b['stat']:.4f} ({res_b['stat']*100:.2f}%)")
-            bm2.metric("p-value", f"{res_b['p']:.4f}")
-
-    # SECTION: Z-Test
-    with st.expander("Z-Test (Normal Approximation)", expanded=False):
-        # Validación Didáctica de Suposiciones
-        n = len(df[selected_col].dropna())
-        exp_successes = n * p0
-        exp_failures = n * (1 - p0)
-        
-        if exp_successes < 10 or exp_failures < 10:
-            st.warning(f"🎓 **Assumption Alert:** Expected successes ({exp_successes:.1f}) or failures ({exp_failures:.1f}) are below 10. The normal approximation may be inaccurate. The **Binomial Test** is recommended.")
-        else:
-            st.success(f"✔️ **Assumption Met:** Expected counts ($np_0$ = {exp_successes:.1f}, $n(1-p_0)$ = {exp_failures:.1f}) are $\\ge 10$.")
-
-        if st.button("Run Z-Test", key="btn_run_ztest"):
-            with st.spinner("Computing Z-statistic..."):
-                stat, p_val, code = perform_one_proportion_ztest(
-                    df=df, selected_column=selected_col, p0=p0, 
-                    alternative=alternative, success_term=success_term
-                )
-                state["ztest"] = {"stat": stat, "p": p_val, "code": code}
-        
-        if "ztest" in state:
-            res_z = state["ztest"]
-            show_code(res_z["code"])
-            zm1, zm2 = st.columns(2)
-            zm1.metric("Z-Statistic", f"{res_z['stat']:.4f}")
-            zm2.metric("p-value", f"{res_z['p']:.4f}")
-
-    # SECTION: Confidence Intervals
-    with st.expander("Confidence Intervals for the Proportion", expanded=False):
-        ci_col1, ci_col2 = st.columns(2)
-        
-        with ci_col1:
-            st.markdown("**Clopper-Pearson (Exact)**")
-            if st.button("Calculate Clopper-Pearson", key="btn_run_clopper"):
-                with st.spinner("Computing exact interval..."):
-                    (low, up), code = get_one_proportion_interval(
-                        df=df, selected_column=selected_col, confidence=confidence,
-                        success_term=success_term, method='beta'
-                    )
-                    state["clopper"] = {"ci": (low, up), "code": code}
+        # Validación Didáctica de Suposiciones para el Z-Test
+        if selected_test == "Z-Test (Normal Approximation)":
+            n = len(df[selected_col].dropna())
+            exp_successes = n * p0
+            exp_failures = n * (1 - p0)
             
-            if "clopper" in state:
-                r_c = state["clopper"]
-                st.metric(f"CI ({confidence*100:.0f}%)", f"({r_c['ci'][0]:.4f}, {r_c['ci'][1]:.4f})")
-                show_code(r_c["code"])
+            if exp_successes < 10 or exp_failures < 10:
+                st.warning(f"🎓 **Assumption Alert:** Expected successes ($np_0$ = {exp_successes:.1f}) or failures ($n(1-p_0)$ = {exp_failures:.1f}) are below 10. The normal approximation may be inaccurate. The **Binomial Test** is highly recommended here.")
 
-        with ci_col2:
-            st.markdown("**Wilson Score**")
-            if st.button("Calculate Wilson Score", key="btn_run_wilson"):
-                with st.spinner("Computing Wilson interval..."):
-                    (low, up), code = get_one_proportion_interval(
-                        df=df, selected_column=selected_col, confidence=confidence,
-                        success_term=success_term, method='wilson'
+        if st.button("Run Analysis", key="btn_run_oneprop"):
+            with st.spinner("Computing statistics..."):
+                
+                # 1. Ejecutar el test seleccionado
+                if selected_test == "Binomial Test (Exact)":
+                    stat, p_val, code_test = perform_one_proportion_binomial_test(
+                        df=df, selected_column=selected_col, p0=p0, 
+                        alternative=alternative, success_term=success_term
                     )
-                    state["wilson"] = {"ci": (low, up), "code": code}
+                else:
+                    stat, p_val, code_test = perform_one_proportion_ztest(
+                        df=df, selected_column=selected_col, p0=p0, 
+                        alternative=alternative, success_term=success_term
+                    )
+                
+                # 2. Ejecutar el IC seleccionado
+                method_str = 'beta' if "Clopper-Pearson" in selected_ci else 'wilson'
+                (low, up), code_ci = get_one_proportion_interval(
+                    df=df, selected_column=selected_col, confidence=confidence,
+                    success_term=success_term, method=method_str
+                )
+                
+                # Guardar en el estado
+                state["results"] = {
+                    "stat": stat,
+                    "p_val": p_val,
+                    "ci": (low, up),
+                    "code_test": code_test,
+                    "code_ci": code_ci
+                }
+
+        # Mostrar Resultados
+        if "results" in state:
+            res = state["results"]
             
-            if "wilson" in state:
-                r_w = state["wilson"]
-                st.metric(f"CI ({confidence*100:.0f}%)", f"({r_w['ci'][0]:.4f}, {r_w['ci'][1]:.4f})")
-                show_code(r_w["code"])
+            c1, c2, c3 = st.columns(3)
+            if selected_test == "Binomial Test (Exact)":
+                c1.metric("Sample Proportion", f"{res['stat']:.4f} ({res['stat']*100:.2f}%)")
+            else:
+                c1.metric("Z-Statistic", f"{res['stat']:.4f}")
+                
+            c2.metric(f"p-value ({alternative})", f"{res['p_val']:.4f}")
+            c3.metric(f"Confidence Interval", f"({res['ci'][0]:.4f}, {res['ci'][1]:.4f})")
+            
+            st.markdown("#### Logic")
+            st.markdown("**Test:**")
+            show_code(res["code_test"])
+            st.markdown(f"**Confidence Interval ({selected_ci.split('(')[0].strip()}):**")
+            show_code(res["code_ci"])

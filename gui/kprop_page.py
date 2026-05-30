@@ -105,7 +105,6 @@ def render_kprop_test_page():
 
     # SECTION: Chi-Square Test
     with st.expander("🧪 2. Chi-Square Test of Homogeneity", expanded=False):
-        st.warning("🎓 **Assumption Reminder:** The Chi-Square test assumes that at least 80% of the cells have an expected frequency of 5 or more, and no cell has an expected frequency of less than 1. If this is violated, consider combining categories or using Fisher's Exact Test.")
         
         if st.button("Run Chi-Square Test", key="btn_kprop_chi"):
             with st.spinner("Computing statistics..."):

@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from gui.components import show_code
 from logic.basic_code import get_numeric_columns, get_categorical_columns
-from logic.twopop_logic import perform_ftest, perform_levene, plot_confidence_interval
+from logic.twopop_logic import perform_ftest, perform_levene, plot_confidence_interval, get_sample_variance_ratio
 
 @st.cache_data(show_spinner=False)
 def cached_numeric_columns(df):
@@ -118,83 +118,139 @@ def render_twopop_variances_page():
     state = st.session_state.twopop_var_state
     st.divider()
 
-    with st.expander("🧪 1. F‑Test for Equality of Variances", expanded=not state.get("ftest")):
-        if st.button("Run F‑Test", key="btn_run_ftest"):
-            with st.spinner("Computing F‑test statistics..."):
-                f_stat, p_val, ci, code = perform_ftest(
-                    df_filtrado, selected_num_col, selected_cat_col, alternative, confidence
-                )
-                state["ftest"] = {
-                    "f_stat": f_stat,
-                    "p_value": p_val,
-                    "ci": ci,
-                    "code": code,
-                    "is_sampled": False,
-                }
+    # --- 4. Dynamic Test Selection ---
+    
+    # Texto de ayuda (Tooltip) explicando cuándo usar cada opción
+    help_tooltip = (
+        "**Test Recommendations:**\n\n"
+        "📊 **F-Test:** Use this when you are confident that both populations are strictly normally distributed.\n\n"
+        "🛡️ **Levene's Test:** Use this when your data deviates from normality or you are unsure. It is more robust against non-normal data."
+    )
+    
+    selected_test = st.selectbox(
+        "Select Statistical Test",
+        ["F-Test for Equality of Variances", "Levene's Test for Equality of Variances"],
+        help=help_tooltip,
+        key="tpv_test_selector"
+    )
 
-        if "ftest" in state:
-            res_f = state["ftest"]
-            show_code(res_f["code"])
-            c1, c2, c3 = st.columns(3)
-            c1.metric("F-statistic", f"{res_f['f_stat']:.4f}")
-            c2.metric(f"P-value ({alternative})", f"{res_f['p_value']:.4f}")
-            c3.metric(
-                "Confidence Interval",
-                f"({res_f['ci'][0]:.4f}, {res_f['ci'][1]:.4f})",
-            )
+    # Un único desplegable dinámico para el test estadístico seleccionado
+    with st.expander(f"🧪 Test: {selected_test}", expanded=True):
+        
+        # --- F-TEST LOGIC ---
+        if selected_test == "F-Test for Equality of Variances":
+            if st.button("Run F‑Test", key="btn_run_ftest"):
+                with st.spinner("Computing F‑test statistics..."):
+                    f_stat, p_val, ci, code = perform_ftest(
+                        df_filtrado, selected_num_col, selected_cat_col, alternative, confidence
+                    )
+                    state["ftest"] = {
+                        "f_stat": f_stat,
+                        "p_value": p_val,
+                        "ci": ci,
+                        "code": code,
+                        "is_sampled": False,
+                    }
 
-    with st.expander("🧪 2. Levene's Test for Equality of Variances", expanded=False):
-        if st.button("Run Levene's Test", key="btn_run_levene"):
-            with st.spinner("Computing Levene statistics..."):
-                # Enviamos df_filtrado a perform_levene
-                stat, p_val_l, ci_l, code_l, is_sampled = perform_levene(
-                    df_filtrado, selected_num_col, selected_cat_col, confidence
-                )
-                state["levene"] = {
-                    "stat": stat,
-                    "p_value": p_val_l,
-                    "ci": ci_l,
-                    "code": code_l,
-                    "is_sampled": is_sampled,
-                }
-
-        if "levene" in state:
-            res_l = state["levene"]
-            show_code(res_l["code"])
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Levene Statistic", f"{res_l['stat']:.4f}")
-            c2.metric("P-value", f"{res_l['p_value']:.4f}")
-            c3.metric(
-                "Confidence Interval",
-                f"({res_l['ci'][0]:.4f}, {res_l['ci'][1]:.4f})",
-            )
-            if res_l.get("is_sampled"):
-                st.info(
-                    "ℹ️ The bootstrap confidence interval was computed on a safety-sampled subset "
-                    "of the data (proportional stratified sampling) to avoid memory overload."
+            if "ftest" in state:
+                res_f = state["ftest"]
+                show_code(res_f["code"])
+                c1, c2, c3 = st.columns(3)
+                c1.metric("F-statistic", f"{res_f['f_stat']:.4f}")
+                c2.metric(f"P-value ({alternative})", f"{res_f['p_value']:.4f}")
+                c3.metric(
+                    "Confidence Interval",
+                    f"({res_f['ci'][0]:.4f}, {res_f['ci'][1]:.4f})",
                 )
 
-    with st.expander("📊 3. Visual Analysis (Variance Ratio Plot)", expanded=False):
-        if "ftest" not in state:
-            st.warning("⚠️ Please run the F-Test first (expand the first section) to obtain the confidence interval for the ratio.")
+        # --- LEVENE'S TEST LOGIC ---
+        elif selected_test == "Levene's Test for Equality of Variances":
+            if st.button("Run Levene's Test", key="btn_run_levene"):
+                with st.spinner("Computing Levene statistics..."):
+                    stat, p_val_l, ci_l, code_l, is_sampled = perform_levene(
+                        df_filtrado, selected_num_col, selected_cat_col, confidence
+                    )
+                    state["levene"] = {
+                        "stat": stat,
+                        "p_value": p_val_l,
+                        "ci": ci_l,
+                        "code": code_l,
+                        "is_sampled": is_sampled,
+                    }
+
+            if "levene" in state:
+                res_l = state["levene"]
+                show_code(res_l["code"])
+                c1, c2, c3 = st.columns(3)
+                c1.metric("Levene Statistic", f"{res_l['stat']:.4f}")
+                c2.metric("P-value", f"{res_l['p_value']:.4f}")
+                c3.metric(
+                    "Confidence Interval",
+                    f"({res_l['ci'][0]:.4f}, {res_l['ci'][1]:.4f})",
+                )
+                if res_l.get("is_sampled"):
+                    st.info(
+                        "ℹ️ The bootstrap confidence interval was computed on a safety-sampled subset "
+                        "of the data (proportional stratified sampling) to avoid memory overload."
+                    )
+
+    # --- 5. Visual Analysis (Independiente del selector) ---
+    with st.expander("📊 Visual Analysis (Variance Ratio Plot)", expanded=False):
+        
+        has_ftest = "ftest" in state
+        has_levene = "levene" in state
+        
+        if not has_ftest and not has_levene:
+            st.warning("⚠️ Please run at least one statistical test (F-Test or Levene's) first to obtain a confidence interval for the plot.")
             st.button("Generate Plot", key="btn_gen_var_plot", disabled=True)
         else:
             if st.button("Generate Plot", key="btn_gen_var_plot"):
                 with st.spinner("Generating visualization..."):
-                    ci = state["ftest"]["ci"]
-                    f_stat = state["ftest"]["f_stat"]
                     name1, name2 = selected_categories[0], selected_categories[1]
                     
+                    active_ci = None
+                    ci_source = ""
+                    
+                    if selected_test == "F-Test for Equality of Variances" and has_ftest:
+                        active_ci = state["ftest"]["ci"]
+                        ci_source = "F-Test"
+                    elif selected_test == "Levene's Test for Equality of Variances" and has_levene:
+                        active_ci = state["levene"]["ci"]
+                        ci_source = "Levene's Test"
+                    else:
+                        # Fallback por si cambiaron el dropdown pero no ejecutaron el test
+                        if has_ftest:
+                            active_ci = state["ftest"]["ci"]
+                            ci_source = "F-Test"
+                        else:
+                            active_ci = state["levene"]["ci"]
+                            ci_source = "Levene's Test"
+                    
+                    sample_variance_ratio, code_ratio = get_sample_variance_ratio(
+                        df_filtrado, selected_num_col, selected_cat_col
+                    )
+
+                    # 3. Graficamos
                     fig, code_plot = plot_confidence_interval(
-                        ci[0], ci[1], f_stat,
+                        active_ci[0], active_ci[1], sample_variance_ratio,
                         title=rf"CI for the Variance Ratio ($\sigma_{{{name1}}}^2 / \sigma_{{{name2}}}^2$)",
                         x_label="Ratio",
                         y_label="Variance Test",
                         H0=1,
                     )
-                    state["plot"] = {"fig": fig, "code": code_plot}
+                    
+                    state["plot"] = {
+                        "fig": fig, 
+                        "code": code_plot,
+                        "ratio": sample_variance_ratio,
+                        "code_ratio": code_ratio,
+                        "ci_source": ci_source
+                    }
 
         if "plot" in state:
             res_p = state["plot"]
+            st.metric("Sample Variance Ratio", f"{res_p['ratio']:.4f}")
+            st.markdown("Sample Variance Ratio Logic:")
+            show_code(res_p["code_ratio"])
             st.pyplot(res_p["fig"])
             show_code(res_p["code"])

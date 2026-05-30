@@ -29,7 +29,7 @@ def perform_cramers_v_test(df, var1_col, var2_col):
         "n = table.values.sum()\n"
         "k = min(table.shape)\n"
         "cramers_v = np.sqrt(chi2 / (n * (k - 1)))\n\n"
-        "print(f'Cramér\\'s V: {cramers_v:.4f}')\n"
+        "print(f'Cramér\\'s V: {cramers_v:.6f}')\n"
         "print(f'P-value: {p:.4f}')\n"
     )
     
@@ -50,7 +50,7 @@ def perform_pearsons_c_test(df, var1_col, var2_col):
         "chi2, p, _, _ = chi2_contingency(table, correction=False)\n"
         "n = table.values.sum()\n"
         "pearson_c = np.sqrt(chi2 / (chi2 + n))\n\n"
-        "print(f'Pearson\\'s C Coefficient: {pearson_c:.4f}')\n"
+        "print(f'Pearson\\'s C Coefficient: {pearson_c:.6f}')\n"
         "print(f'P-value: {p:.4f}')\n"
     )
     
@@ -74,7 +74,7 @@ def perform_phi_coefficient_test(df, var1_col, var2_col):
         "chi2, p, _, _ = chi2_contingency(table, correction=False)\n"
         "n = table.values.sum()\n"
         "phi = np.sqrt(chi2 / n)\n\n"
-        "print(f'Phi Coefficient: {phi:.4f}')\n"
+        "print(f'Phi Coefficient: {phi:.6f}')\n"
         "print(f'P-value: {p:.4f}')\n"
     )
     

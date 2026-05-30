@@ -96,36 +96,48 @@ def render_kpop_variances_page():
 
     st.divider()
 
-    # --- 4. Granular Analysis Sections ---
+    # --- 4. Dynamic Test Selection ---
+    
+    help_tooltip = (
+        "**Test Recommendations:**\n\n"
+        "📊 **Bartlett's Test:** Use this when you are strictly confident that all groups come from normal distributions. It is very sensitive to non-normality.\n\n"
+        "🛡️ **Levene's Test:** Use this when your data deviates from normality or you are unsure. It is much more robust and is generally the safer default choice."
+    )
+    
+    selected_test = st.selectbox(
+        "Select Statistical Test",
+        ["Bartlett's Test for Equal Variances", "Levene's Test for Equal Variances"],
+        help=help_tooltip,
+        key="kpop_test_selector"
+    )
 
-    # SECTION: Bartlett's Test
-    with st.expander("Bartlett's Test for Equal Variances", expanded=not state.get("bartlett")):
-        if st.button("Run Bartlett's Test", key="btn_bartlett"):
-            with st.spinner("Calculating Bartlett statistic..."):
-                # Call cached filtering function
-                filtered_df = filter_kpop_variances_data(df, selected_cat_col, selected_categories)
-                stat, p_val, code = perform_bartlett(filtered_df, selected_num_col, selected_cat_col)
-                state["bartlett"] = {"stat": stat, "p": p_val, "code": code}
+    with st.expander(f"🧪 Test: {selected_test}", expanded=True):
+        
+        # --- BARTLETT'S TEST LOGIC ---
+        if selected_test == "Bartlett's Test for Equal Variances":
+            if st.button("Run Bartlett's Test", key="btn_bartlett"):
+                with st.spinner("Calculating Bartlett statistic..."):
+                    filtered_df = filter_kpop_variances_data(df, selected_cat_col, selected_categories)
+                    stat, p_val, code = perform_bartlett(filtered_df, selected_num_col, selected_cat_col)
+                    state["bartlett"] = {"stat": stat, "p": p_val, "code": code}
 
-        if "bartlett" in state:
-            res = state["bartlett"]
-            show_code(res["code"])
-            r1, r2 = st.columns(2)
-            r1.metric("Bartlett Statistic", f"{res['stat']:.4f}")
-            r2.metric("P-value", f"{res['p']:.4f}")
+            if "bartlett" in state:
+                res = state["bartlett"]
+                show_code(res["code"])
+                r1, r2 = st.columns(2)
+                r1.metric("Bartlett Statistic", f"{res['stat']:.4f}")
+                r2.metric("P-value", f"{res['p']:.4f}")
 
-    # SECTION: Levene's Test
-    with st.expander("Levene's Test for Equal Variances", expanded=False):
-        if st.button("Run Levene's Test", key="btn_levene"):
-            with st.spinner("Calculating Levene statistic..."):
-                # Call cached filtering function
-                filtered_df = filter_kpop_variances_data(df, selected_cat_col, selected_categories)
-                stat_l, p_val_l, code_l = perform_levene(filtered_df, selected_num_col, selected_cat_col)
-                state["levene"] = {"stat": stat_l, "p": p_val_l, "code": code_l}
+        elif selected_test == "Levene's Test for Equal Variances":
+            if st.button("Run Levene's Test", key="btn_levene"):
+                with st.spinner("Calculating Levene statistic..."):
+                    filtered_df = filter_kpop_variances_data(df, selected_cat_col, selected_categories)
+                    stat_l, p_val_l, code_l = perform_levene(filtered_df, selected_num_col, selected_cat_col)
+                    state["levene"] = {"stat": stat_l, "p": p_val_l, "code": code_l}
 
-        if "levene" in state:
-            res = state["levene"]
-            show_code(res["code"])
-            rl1, rl2 = st.columns(2)
-            rl1.metric("Levene Statistic", f"{res['stat']:.4f}")
-            rl2.metric("P-value", f"{res['p']:.4f}")
+            if "levene" in state:
+                res = state["levene"]
+                show_code(res["code"])
+                rl1, rl2 = st.columns(2)
+                rl1.metric("Levene Statistic", f"{res['stat']:.4f}")
+                rl2.metric("P-value", f"{res['p']:.4f}")

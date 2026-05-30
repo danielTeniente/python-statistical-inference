@@ -318,3 +318,29 @@ def get_sample_difference_in_medians_ovr(df, num_col, cat_col, target_cat):
     code += f"difference = median1 - median2\n"
 
     return median1 - median2, code
+
+def get_sample_variance_ratio_ovr(df, num_col, cat_col, target_cat):
+    """
+    Calculate the ratio of variances between one target category and the rest.
+    """
+    # Crear máscara para el grupo "One" (target_cat)
+    mask = df[cat_col] == target_cat
+    
+    # Calcular la varianza muestral (ddof=1) para ambos grupos, ignorando NaNs
+    var_target = df.loc[mask, num_col].dropna().var(ddof=1)
+    var_rest = df.loc[~mask, num_col].dropna().var(ddof=1)
+
+    # Prevenir divisiones por cero en caso de que la varianza del "Rest" sea 0
+    if var_rest == 0:
+        ratio = float('inf') 
+    else:
+        ratio = var_target / var_rest
+
+    # Generar el código en formato texto para mostrar en la interfaz (show_code)
+    code = f"mask = df['{cat_col}'] == '{target_cat}'\n"
+    code += f"var_target = df.loc[mask, '{num_col}'].dropna().var(ddof=1)\n"
+    code += f"var_rest = df.loc[~mask, '{num_col}'].dropna().var(ddof=1)\n"
+    code += "variance_ratio = var_target / var_rest\n"
+    code += f"print(f'Variance ratio ({target_cat} / Rest): {{variance_ratio:.4f}}')\n"
+
+    return ratio, code

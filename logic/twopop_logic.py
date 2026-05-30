@@ -344,3 +344,29 @@ def get_sample_difference_in_medians(df, num_col, cat_col):
     code += "print(f'Difference in medians: {diff_medians:.4f}')\n"
 
     return median1 - median2, code
+
+def get_sample_variance_ratio(df, num_col, cat_col):
+    """Calculate the ratio of variances between two groups."""
+    df_clean = df.dropna(subset=[cat_col])
+    categories = df_clean[cat_col].unique()
+    group1, group2 = categories[0], categories[1]
+
+    mask = df_clean[cat_col] == group1
+    # Usamos ddof=1 para obtener la varianza muestral (es el default en pandas, pero es buena práctica explicitarlo)
+    var1 = df_clean.loc[mask, num_col].dropna().var(ddof=1)
+    var2 = df_clean.loc[~mask, num_col].dropna().var(ddof=1)
+
+    # Prevenir divisiones por cero en caso de que la varianza del grupo 2 sea 0
+    if var2 == 0:
+        ratio = float('inf') 
+    else:
+        ratio = var1 / var2
+
+    code = f"df_clean = df.dropna(subset=['{cat_col}'])\n"
+    code += f"mask = df_clean['{cat_col}'] == '{group1}'\n"
+    code += f"var1 = df_clean.loc[mask, '{num_col}'].dropna().var(ddof=1)\n"
+    code += f"var2 = df_clean.loc[~mask, '{num_col}'].dropna().var(ddof=1)\n"
+    code += "variance_ratio = var1 / var2\n"
+    code += "print(f'Variance ratio ({group1} / {group2}): {variance_ratio:.4f}')\n"
+
+    return ratio, code

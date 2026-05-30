@@ -57,13 +57,14 @@ def render_descriptive_numerical_page():
 
     if state["summary"]:
         res = state["summary"]
-        st.markdown("**Sample size (number of rows)**")
-        st.metric(label="", value=res["size"])
-        show_code(res["size_code"])
 
         st.markdown("**Shape of the dataset (rows, columns)**")
-        st.metric(label="Number of Columns", value=res["shape"][1])
-        st.metric(label="Number of Rows", value=res["shape"][0])
+        # two columns for better layout
+        c1, c2 = st.columns(2)
+        with c1:
+            st.metric(label="Number of Rows/Observations", value=res["shape"][0])
+        with c2:
+            st.metric(label="Number of Columns/Variables", value=res["shape"][1])
         show_code(res["shape_code"])
 
         st.markdown("**Summary table**")
