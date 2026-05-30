@@ -40,9 +40,6 @@ def render_independence_test_page():
     is_2x2_ui = (n_unique_v1 == 2 and n_unique_v2 == 2)
     total_cells = n_unique_v1 * n_unique_v2
 
-    # --- 3. Dynamic Methodology Selection ---
-    st.markdown("### Methodology Setup")
-    
     col_m1, col_m2 = st.columns(2)
     with col_m1:
         test_tooltip = (
@@ -127,8 +124,6 @@ def render_independence_test_page():
                     "or ideally, switch to the **Chi-Square Test** which is statistically appropriate "
                     "for this sample size."
                 )
-            else:
-                st.success(f"✔️ **Assumption Met:** Simulated table size (**{simulated_table_size:,}**) > Sample size (**{clean_len:,}**).")
 
         if st.button("Run Analysis", key="btn_run_ind", disabled=fisher_blocked):
             with st.spinner("Computing statistics (this may take a moment for simulations)..."):

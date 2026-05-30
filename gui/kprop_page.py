@@ -69,14 +69,8 @@ def render_kprop_test_page():
     k_groups, k_outcomes = get_unique_counts(df, group_col, outcome_col)
     is_2x2 = (k_groups == 2 and k_outcomes == 2)
 
-    if is_2x2:
-        apply_yates = st.checkbox("Apply Yates' Continuity Correction", value=True, key="kprop_yates")
-    else:
-        apply_yates = False
-        st.info(f"💡 **Didactic Note:** Yates' Continuity Correction is mathematically designed only for 2x2 tables. Your selected variables form a **{k_groups}x{k_outcomes}** table, so standard Chi-Square will be used.")
-
     # --- 4. Context ID and State Management ---
-    current_context_id = f"{group_col}_{outcome_col}_{apply_yates}"
+    current_context_id = f"{group_col}_{outcome_col}"
 
     if ("kprop_state" not in st.session_state or 
         st.session_state.get("kprop_context_id") != current_context_id):
@@ -99,9 +93,8 @@ def render_kprop_test_page():
 
         if "table" in state:
             res_t = state["table"]
-            show_code(res_t["code"])
-            st.write("### Crosstab Results:")
             st.dataframe(res_t["data"])
+            show_code(res_t["code"])
 
     # SECTION: Chi-Square Test
     with st.expander("🧪 2. Chi-Square Test of Homogeneity", expanded=False):
@@ -112,14 +105,13 @@ def render_kprop_test_page():
                     df=df, 
                     var1_col=group_col, 
                     var2_col=outcome_col, 
-                    correction=apply_yates
+                    correction=False  # Yates' correction is not typically applied for k > 2
                 )
                 state["chi_test"] = {"stat": chi2_stat, "p": p_val, "code": code_chi2}
 
         if "chi_test" in state:
             res_c = state["chi_test"]
-            show_code(res_c["code"])
-            
             col_res1, col_res2 = st.columns(2)
             col_res1.metric("Chi-Square Statistic", f"{res_c['stat']:.4f}")
             col_res2.metric("p-value", f"{res_c['p']:.4f}")
+            show_code(res_c["code"])

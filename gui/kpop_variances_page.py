@@ -137,7 +137,7 @@ def render_kpop_variances_page():
 
             if "levene" in state:
                 res = state["levene"]
-                show_code(res["code"])
                 rl1, rl2 = st.columns(2)
                 rl1.metric("Levene Statistic", f"{res['stat']:.4f}")
                 rl2.metric("P-value", f"{res['p']:.4f}")
+                show_code(res["code"])

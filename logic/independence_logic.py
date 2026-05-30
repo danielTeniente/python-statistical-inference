@@ -37,9 +37,8 @@ def perform_fisher_exact_test(df, var1_col, var2_col, alternative='two-sided', n
             "print(f'P-value: {p_value:.4f}')\n"
         )
         
-    else:
-        rng = np.random.default_rng(42) 
-        mc_method = MonteCarloMethod(n_resamples=n_resamples, rng=rng)
+    else: 
+        mc_method = MonteCarloMethod(n_resamples=n_resamples)
         
         result = fisher_exact(contingency_table, method=mc_method)
         p_value = result.pvalue
@@ -49,8 +48,7 @@ def perform_fisher_exact_test(df, var1_col, var2_col, alternative='two-sided', n
             "import numpy as np\n"
             "from scipy.stats import fisher_exact, MonteCarloMethod\n\n"
             f"contingency_table = pd.crosstab(df['{var1_col}'], df['{var2_col}'])\n"
-            "rng = np.random.default_rng(42)\n"
-            f"method = MonteCarloMethod(n_resamples={n_resamples}, rng=rng)\n"
+            f"method = MonteCarloMethod(n_resamples={n_resamples})\n"
             "result = fisher_exact(contingency_table, method=method) # Does not support alternative parameter\n\n"
             "print('Contingency Table:')\n"
             "print(contingency_table)\n"

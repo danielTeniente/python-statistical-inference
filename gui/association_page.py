@@ -43,9 +43,6 @@ def render_association_measures_page():
     # Pre-cálculo seguro para is_2x2 (mucho más rápido usando nunique de Pandas sobre la serie ya cargada)
     is_2x2 = (df[var1_col].nunique() == 2 and df[var2_col].nunique() == 2)
 
-    # --- 3. Dynamic Methodology Selection ---
-    st.markdown("### Methodology Setup")
-    
     # Construir opciones dinámicamente basadas en la forma de la tabla
     measure_options = ["Cramér's V", "Pearson's Contingency Coefficient (C)"]
     if is_2x2:

@@ -144,8 +144,6 @@ def render_twoprop_test_page():
                 if (exp_successes < 10).any() or (exp_failures < 10).any():
                     min_exp = min(exp_successes.min(), exp_failures.min())
                     st.warning(f"🎓 **Assumption Alert:** The minimum expected count under the null hypothesis is **{min_exp:.1f}** (less than 10). The normal approximation may be invalid. **Fisher's Exact Test** is highly recommended here.")
-                else:
-                    st.success("✔️ **Assumption Met:** All expected success and failure counts in both groups are $\\ge 10$.")
 
         if st.button("Run Analysis", key="btn_run_twoprop"):
             with st.spinner("Computing statistics..."):
