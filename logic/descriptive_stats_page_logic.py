@@ -120,6 +120,34 @@ def get_boxplot(df, column):
     
     return fig, code
 
+def get_grouped_boxplot(df, column, cat_col):
+    """
+    Processes the data to create a grouped boxplot by category 
+    and returns the figure and the equivalent Python code as a string.
+    """
+    fig, ax = plt.subplots(figsize=(15, 5))
+    
+    df.boxplot(column=column, by=cat_col, ax=ax, grid=False)
+    
+    fig.suptitle('') # Pandas añade un "suptitle" por defecto, lo borramos para que quede limpio
+    ax.set_title(f'Boxplot of {column} by {cat_col}')
+    ax.set_xlabel(f'{cat_col}', fontsize=12)
+    ax.set_ylabel(f'{column}', fontsize=12) # Cambié 'Values' por el nombre de la columna para dar más contexto
+    ax.grid(alpha=0.3)
+    
+    code = "import matplotlib.pyplot as plt\n\n"
+    code += "fig, ax = plt.subplots(figsize=(15, 5))\n"
+    code += f"df.boxplot(column='{column}', by='{cat_col}', ax=ax, grid=False)\n"
+    code += "fig.suptitle('')"
+    code += f"ax.set_title('Boxplot of {column} by {cat_col}')\n"
+    code += f"ax.set_xlabel('{cat_col}', fontsize=12)\n"
+    code += f"ax.set_ylabel('{column}', fontsize=12)\n"
+    code += "ax.grid(alpha=0.3)\n"
+    code += "plt.show()"
+    
+    # 5. Retornar ambos elementos
+    return fig, code
+
 # Categorical variables
 
 def get_barplot(df, column):
@@ -169,7 +197,3 @@ def get_frequency_table(df, column) -> (pd.DataFrame, str):
     code += f"freq_table = pd.DataFrame([abs_freq, rel_freq])\n"
     code += f"freq_table.index = ['Frequency', 'Relative (%)']\n"
     return freq_table, code
-
-
-
-

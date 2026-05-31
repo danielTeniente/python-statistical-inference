@@ -4,7 +4,7 @@ def render_about_page():
     st.title("About This Project")
     
     # Etiqueta de versión usando un contenedor de información de Streamlit
-    st.info("**Current Version:** v0.1.0-alpha (Work in Progress / Under Development)")
+    st.info("**Current Version:** v1.0.0 (May 2026)")
 
     st.markdown("### Background & Motivation")
     st.markdown("""

@@ -1,7 +1,7 @@
 import streamlit as st
 from logic.basic_code import get_numeric_columns
 from logic.descriptive_stats_page_logic import (
-    describe_dataset, get_histogram, get_boxplot, 
+    describe_dataset, get_histogram, get_boxplot, get_grouped_boxplot,
     get_sample_size, get_dataset_size, get_mean, 
     get_median, get_mode, get_std, get_variance,
     get_min, get_max, get_range, get_quartiles,
@@ -155,11 +155,30 @@ def render_descriptive_numerical_page():
 
     # --- SECTION 3: DATA VISUALIZATION ---
     st.subheader("3. Data Visualization")
-    selected_col_plot = st.selectbox("Select column to plot", numeric_cols, key="sel_col_plot")
-    bins_count = st.slider("Number of bins", 5, 50, 20, key="bins_slider")
+    
+    # Dividimos la interfaz en dos columnas para mejor diseño
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        selected_col_plot = st.selectbox("Select column to plot", numeric_cols, key="sel_col_plot")
+        bins_count = st.slider("Number of bins (Histogram)", 5, 50, 20, key="bins_slider")
+        
+    with col2:
+        # Obtenemos las columnas categóricas dinámicamente
+        cat_cols = df.select_dtypes(include=['object', 'category', 'bool']).columns.tolist()
+        
+        # Checkbox condicional
+        group_by_cat = st.checkbox("Group Boxplot by Category", key="chk_group_box")
+        selected_cat_col = None
+        
+        if group_by_cat:
+            if not cat_cols:
+                st.warning("No categorical columns available for grouping in this dataset.")
+            else:
+                selected_cat_col = st.selectbox("Select categorical column", cat_cols, key="sel_cat_col")
 
-    # Context ID for Section 3
-    plot_id = f"plot_{selected_col_plot}_{bins_count}"
+    # Context ID for Section 3 (actualizado para incluir los nuevos estados)
+    plot_id = f"plot_{selected_col_plot}_{bins_count}_{group_by_cat}_{selected_cat_col}"
     if st.session_state.get("id_plot") != plot_id:
         state["plots"] = {}
         st.session_state.id_plot = plot_id
@@ -167,7 +186,12 @@ def render_descriptive_numerical_page():
     if st.button("Generate Visualizations", key="btn_plots"):
         with st.spinner("Generating plots..."):
             h_fig, h_code = get_histogram(df, selected_col_plot, bins=bins_count)
-            b_fig, b_code = get_boxplot(df, selected_col_plot)
+            
+            # Condicional para generar el boxplot normal o agrupado
+            if group_by_cat and selected_cat_col:
+                b_fig, b_code = get_grouped_boxplot(df, selected_col_plot, selected_cat_col)
+            else:
+                b_fig, b_code = get_boxplot(df, selected_col_plot)
             
             state["plots"] = {
                 "hist": (h_fig, h_code),
