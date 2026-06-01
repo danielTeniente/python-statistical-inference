@@ -1,4 +1,5 @@
 import streamlit as st
+from gui.home_page import render_home_page
 from gui.load_dataset_page import render_upload_page
 from gui.dtypes_page import render_change_dtype_page
 from gui.normality_page import render_normality_test_page
@@ -36,7 +37,7 @@ if "df" not in st.session_state:
     st.session_state.df = None
 
 if "current_page" not in st.session_state:
-    st.session_state.current_page = "Upload Dataset"
+    st.session_state.current_page = "Home"
 
 # Función auxiliar para cambiar de página fácilmente
 def change_page(page_name):
@@ -44,6 +45,9 @@ def change_page(page_name):
 
 # --- SIDEBAR NAVIGATION ---
 st.sidebar.title("Navigation")
+
+if st.sidebar.button("Home", width='stretch'):
+    change_page("Home")
 
 if st.sidebar.button("Upload Dataset", width='stretch'):
     change_page("Upload Dataset")
@@ -133,7 +137,10 @@ if st.sidebar.button("About", width='stretch'):
 # Leemos la página actual desde el session_state y renderizamos
 page = st.session_state.current_page
 
-if page == "Upload Dataset":
+if page == "Home":
+    render_home_page()
+
+elif page == "Upload Dataset":
     render_upload_page()
     
 elif page == "Descriptive - Numerical":
