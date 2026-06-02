@@ -101,7 +101,7 @@ def render_ovr_normality_test_page():
                     'Statistic': '{:.4f}', 
                     'p-value': '{:.4f}'
                 }), 
-                use_container_width=True,
+                width='stretch',
                 hide_index=True
             )
             

@@ -69,7 +69,7 @@ def render_descriptive_numerical_page():
 
         st.markdown("**Summary table**")
         show_code(res["desc_code"])
-        st.dataframe(res["desc"], use_container_width=True)
+        st.dataframe(res["desc"], width='stretch')
 
     st.divider()
 

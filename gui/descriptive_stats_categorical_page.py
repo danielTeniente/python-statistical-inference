@@ -50,7 +50,7 @@ def render_descriptive_categorical_page():
         if "table" in state:
             res_t = state["table"]
             st.write("### Frequency Results:")
-            st.dataframe(res_t["data"], use_container_width=True)
+            st.dataframe(res_t["data"], width='stretch')
             show_code(res_t["code"])
 
     # SECTION: Bar Plot

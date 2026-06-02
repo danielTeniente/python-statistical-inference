@@ -148,7 +148,7 @@ def render_kpop_means_page():
             
             # Render dataframe or text depending on the test type
             if isinstance(res["data"], pd.DataFrame):
-                st.dataframe(res["data"], use_container_width=True)
+                st.dataframe(res["data"], width='stretch')
             else:
                 st.text(str(res["data"]))
             

@@ -110,7 +110,7 @@ def render_normality_test_by_group_page():
                     'Statistic': '{:.4f}', 
                     'p-value': '{:.4f}'
                 }), 
-                use_container_width=True,
+                width='stretch',
                 hide_index=True
             )
             

@@ -148,7 +148,7 @@ def render_kpop_medians_page():
         if "bootstrap" in state:
             res = state["bootstrap"]
             st.markdown("**Statistical Results:**")
-            st.dataframe(res["data"], use_container_width=True)
+            st.dataframe(res["data"], width='stretch')
             
             st.markdown("**Confidence Interval Plot:**")
             st.pyplot(res["fig"])

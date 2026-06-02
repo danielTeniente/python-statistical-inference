@@ -86,7 +86,7 @@ def render_association_measures_page():
 
         if "table" in state:
             res_t = state["table"]
-            st.dataframe(res_t["ct"], use_container_width=True)
+            st.dataframe(res_t["ct"], width='stretch')
             show_code(res_t["code"])
 
     # --- 6. Unified Execution Section ---

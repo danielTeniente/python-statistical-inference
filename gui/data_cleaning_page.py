@@ -47,7 +47,7 @@ def render_data_cleaning_page():
         if preview_df.empty:
             st.info("This column is completely empty (all nulls).")
         else:
-            st.dataframe(preview_df, use_container_width=True)
+            st.dataframe(preview_df, width='stretch')
         # ------------------------------------------------
             
     with col2:

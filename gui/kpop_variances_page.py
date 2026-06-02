@@ -123,10 +123,10 @@ def render_kpop_variances_page():
 
             if "bartlett" in state:
                 res = state["bartlett"]
-                show_code(res["code"])
                 r1, r2 = st.columns(2)
                 r1.metric("Bartlett Statistic", f"{res['stat']:.4f}")
                 r2.metric("P-value", f"{res['p']:.4f}")
+                show_code(res["code"])
 
         elif selected_test == "Levene's Test for Equal Variances":
             if st.button("Run Levene's Test", key="btn_levene"):
