@@ -3,12 +3,6 @@ from scipy.stats import f
 from scipy import stats
 import matplotlib.pyplot as plt
 
-# ---------------------------------------------------------------------------
-# Safety constants – can be moved to a central config
-# ---------------------------------------------------------------------------
-# Maximum total number of observations (across all groups) for which
-# bootstrap confidence intervals are computed on the full data.
-# If exceeded, stratified proportional sampling is applied.
 BOOTSTRAP_SAFETY_LIMIT = 5000
 
 def apply_safety_sampling(data1, data2, var1_name="data1", var2_name="data2", limit=BOOTSTRAP_SAFETY_LIMIT):
@@ -170,68 +164,20 @@ def perform_levene(df, num_col, cat_col, confidence=0.95):
 
     return stat, p_value, ci_tuple, code, is_sampled
 
-def plot_confidence_interval(low, high, estimated_value, title="Confidence Interval",
-    x_label="", y_label="", H0=0):
-    """
-    Generates a Forest Plot for a confidence interval.
-    """
-    left_dist = estimated_value - low
-    right_dist = high - estimated_value
 
-    fig, ax = plt.subplots(figsize=(8, 3))
-
-    ax.axvline(x=H0, color='red', linestyle='--', linewidth=2, label='H₀ (Equal)')
-    
-    ax.errorbar(x=estimated_value, y=0,
-                xerr=[[left_dist], [right_dist]], 
-                fmt='o', 
-                color='#1f77b4', 
-                markersize=10, 
-                capsize=8, 
-                linewidth=2,
-                label='Estimate (CI)')
-
-    ax.set_yticks([0])
-    ax.set_yticklabels([y_label], fontsize=12)
-    ax.set_ylim(-0.5, 0.5)
-    ax.set_xlabel(x_label, fontsize=11)
-    ax.set_title(title, fontsize=14, pad=15)
-    
-    ax.grid(axis='x', linestyle=':', alpha=0.7)
-    ax.legend(loc='upper right')
-    fig.tight_layout()
-
-    # Code snippet
-    code = "import matplotlib.pyplot as plt\n\n"
-    code += f"estimated_value = {estimated_value}\n"
-    code += f"ci_lower = {low}\n"
-    code += f"ci_upper = {high}\n"
-    code += "left_dist = estimated_value - ci_lower\n"
-    code += "right_dist = ci_upper - estimated_value\n\n"
-    code += "fig, ax = plt.subplots(figsize=(8, 3))\n"
-    code += f"ax.axvline(x={H0}, color='red', linestyle='--', linewidth=2, label='H₀ (Equal)')\n"
-    code += "ax.errorbar(x=estimated_value, y=0, xerr=[[left_dist], [right_dist]], fmt='o', color='#1f77b4', markersize=10, capsize=8, linewidth=2, label='Estimate (CI)')\n"
-    code += "ax.set_yticks([0])\n"
-    code += f"ax.set_yticklabels(['{y_label}'], fontsize=12)\n"
-    code += "ax.set_ylim(-0.5, 0.5)\n"
-    code += f"ax.set_xlabel('{x_label}', fontsize=11)\n"
-    code += f"ax.set_title('{title}', fontsize=14, pad=15)\n"
-    code += "ax.grid(axis='x', linestyle=':', alpha=0.7)\n"
-    code += "ax.legend(loc='upper right')\n"
-    code += "fig.tight_layout()\n"
-    code += "plt.show()"
-
-    return fig, code
-
-def perform_ttest(df, num_col, cat_col, alternative='two-sided', confidence=0.95, equal_var=True):
-    """Perform T-test using SciPy's built-in function, grouped by a categorical column."""
+def perform_ttest(df, num_col, cat_col, selected_categories, alternative='two-sided', confidence=0.95, equal_var=True):
+    """Perform T-test using SciPy's built-in function, respecting the selection order."""
     df_clean = df.dropna(subset=[cat_col])
-    categories = df_clean[cat_col].unique()
-    group1, group2 = categories[0], categories[1]
+    
+    # Extraemos explícitamente el orden seleccionado por el usuario
+    group1, group2 = selected_categories[0], selected_categories[1]
 
-    mask = df_clean[cat_col] == group1
-    x1 = df_clean.loc[mask, num_col].dropna()
-    x2 = df_clean.loc[~mask, num_col].dropna()
+    # Filtramos usando las variables directamente
+    mask1 = df_clean[cat_col] == group1
+    mask2 = df_clean[cat_col] == group2
+    
+    x1 = df_clean.loc[mask1, num_col].dropna()
+    x2 = df_clean.loc[mask2, num_col].dropna()
 
     res = stats.ttest_ind(x1, x2, equal_var=equal_var, alternative=alternative)
     t_stat = res.statistic
@@ -239,13 +185,13 @@ def perform_ttest(df, num_col, cat_col, alternative='two-sided', confidence=0.95
     ci_obj = res.confidence_interval(confidence_level=confidence)
     ci_tuple = (ci_obj.low, ci_obj.high)
 
-    # Code snippet
+    # Actualizamos el código que se muestra al usuario para reflejar el orden
     code = "from scipy import stats\n\n"
     code += f"# Prepare data\n"
     code += f"df_clean = df.dropna(subset=['{cat_col}'])\n"
-    code += f"mask = df_clean['{cat_col}'] == '{group1}'\n"
-    code += f"x1 = df_clean.loc[mask, '{num_col}'].dropna()\n"
-    code += f"x2 = df_clean.loc[~mask, '{num_col}'].dropna()\n\n"
+    code += f"group1, group2 = '{group1}', '{group2}'\n"
+    code += f"x1 = df_clean.loc[df_clean['{cat_col}'] == group1, '{num_col}'].dropna()\n"
+    code += f"x2 = df_clean.loc[df_clean['{cat_col}'] == group2, '{num_col}'].dropna()\n\n"
     code += f"res = stats.ttest_ind(x1, x2, equal_var={equal_var}, alternative='{alternative}')\n"
     code += "print(f'T-statistic: {res.statistic:.4f}')\n"
     code += "print(f'p-value: {res.pvalue:.4f}')\n\n"
@@ -370,3 +316,56 @@ def get_sample_variance_ratio(df, num_col, cat_col):
     code += "print(f'Variance ratio ({group1} / {group2}): {variance_ratio:.4f}')\n"
 
     return ratio, code
+
+def plot_confidence_interval(low, high, estimated_value, title="Confidence Interval",
+    x_label="", y_label="", H0=0):
+    """
+    Generates a Forest Plot for a confidence interval.
+    """
+    left_dist = estimated_value - low
+    right_dist = high - estimated_value
+
+    fig, ax = plt.subplots(figsize=(8, 3))
+
+    ax.axvline(x=H0, color='red', linestyle='--', linewidth=2, label='H₀ (Equal)')
+    
+    ax.errorbar(x=estimated_value, y=0,
+                xerr=[[left_dist], [right_dist]], 
+                fmt='o', 
+                color='#1f77b4', 
+                markersize=10, 
+                capsize=8, 
+                linewidth=2,
+                label='Estimate (CI)')
+
+    ax.set_yticks([0])
+    ax.set_yticklabels([y_label], fontsize=12)
+    ax.set_ylim(-0.5, 0.5)
+    ax.set_xlabel(x_label, fontsize=11)
+    ax.set_title(title, fontsize=14, pad=15)
+    
+    ax.grid(axis='x', linestyle=':', alpha=0.7)
+    ax.legend(loc='upper right')
+    fig.tight_layout()
+
+    # Code snippet
+    code = "import matplotlib.pyplot as plt\n\n"
+    code += f"estimated_value = {estimated_value}\n"
+    code += f"ci_lower = {low}\n"
+    code += f"ci_upper = {high}\n"
+    code += "left_dist = estimated_value - ci_lower\n"
+    code += "right_dist = ci_upper - estimated_value\n\n"
+    code += "fig, ax = plt.subplots(figsize=(8, 3))\n"
+    code += f"ax.axvline(x={H0}, color='red', linestyle='--', linewidth=2, label='H₀ (Equal)')\n"
+    code += "ax.errorbar(x=estimated_value, y=0, xerr=[[left_dist], [right_dist]], fmt='o', color='#1f77b4', markersize=10, capsize=8, linewidth=2, label='Estimate (CI)')\n"
+    code += "ax.set_yticks([0])\n"
+    code += f"ax.set_yticklabels(['{y_label}'], fontsize=12)\n"
+    code += "ax.set_ylim(-0.5, 0.5)\n"
+    code += f"ax.set_xlabel('{x_label}', fontsize=11)\n"
+    code += f"ax.set_title('{title}', fontsize=14, pad=15)\n"
+    code += "ax.grid(axis='x', linestyle=':', alpha=0.7)\n"
+    code += "ax.legend(loc='upper right')\n"
+    code += "fig.tight_layout()\n"
+    code += "plt.show()"
+
+    return fig, code
