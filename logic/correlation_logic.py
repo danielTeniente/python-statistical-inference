@@ -169,8 +169,13 @@ def get_scatterplot(df, col_x, col_y, show_line=False):
         coef = np.polyfit(x_full, y_full, 1)
         poly_fn = np.poly1d(coef)
         
-        # Plot line across the full range of X
-        ax.plot(x_full, poly_fn(x_full), color='red', linewidth=2, label='Linear Fit')
+        # Equation
+        m, b = coef[0], coef[1]
+        sign = '+' if b >= 0 else '-'
+        eq_text = f'y = {m:.4f}x {sign} {abs(b):.4f}'
+        
+        # Plot line across the full range of X y agregamos la ecuación al label
+        ax.plot(x_full, poly_fn(x_full), color='red', linewidth=2, label=eq_text)
         ax.legend()
     
     ax.set_title(title_text)
@@ -193,8 +198,12 @@ def get_scatterplot(df, col_x, col_y, show_line=False):
         code += (
             "r_val, _ = pearsonr(x, y)\n"
             "coef = np.polyfit(x, y, 1)\n"
-            "poly_fn = np.poly1d(coef)\n"
-            "plt.plot(x, poly_fn(x), color='red', linewidth=2, label='Linear Fit')\n"
+            "poly_fn = np.poly1d(coef)\n\n"
+            "# Calcular y dar formato a la ecuación de la recta\n"
+            "m, b = coef[0], coef[1]\n"
+            "sign = '+' if b >= 0 else '-'\n"
+            "eq_text = f'y = {m:.4f}x {sign} {abs(b):.4f}'\n\n"
+            "plt.plot(x, poly_fn(x), color='red', linewidth=2, label=eq_text)\n"
             f"plt.title(f'Scatterplot of {col_y} vs {col_x} (r = {{r_val:.3f}})')\n"
             "plt.legend()\n"
         )
