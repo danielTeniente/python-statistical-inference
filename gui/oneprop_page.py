@@ -168,14 +168,14 @@ def render_oneprop_test_page():
         if "results" in state:
             res = state["results"]
             
-            c1, c2, c3 = st.columns(3)
+            c1, c2 = st.columns(2)
             if selected_test == "Binomial Test (Exact)":
                 c1.metric("Sample Proportion", f"{res['stat']:.4f} ({res['stat']*100:.2f}%)")
             else:
                 c1.metric("Z-Statistic", f"{res['stat']:.4f}")
                 
             c2.metric(f"p-value ({alternative})", f"{res['p_val']:.4f}")
-            c3.metric(f"Confidence Interval", f"({res['ci'][0]:.4f}, {res['ci'][1]:.4f})")
+            st.metric(f"Confidence Interval", f"({res['ci'][0]:.4f}, {res['ci'][1]:.4f})")
             
             st.markdown("#### Logic")
             st.markdown("**Test:**")

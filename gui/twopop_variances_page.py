@@ -142,7 +142,7 @@ def render_twopop_variances_page():
             if st.button("Run F‑Test", key="btn_run_ftest"):
                 with st.spinner("Computing F‑test statistics..."):
                     f_stat, p_val, ci, code = perform_ftest(
-                        df_filtrado, selected_num_col, selected_cat_col, alternative, confidence
+                        df_filtrado, selected_num_col, selected_cat_col, selected_categories, alternative, confidence
                     )
                     state["ftest"] = {
                         "f_stat": f_stat,
@@ -154,10 +154,10 @@ def render_twopop_variances_page():
 
             if "ftest" in state:
                 res_f = state["ftest"]
-                c1, c2, c3 = st.columns(3)
+                c1, c2 = st.columns(2)
                 c1.metric("F-statistic", f"{res_f['f_stat']:.4f}")
                 c2.metric(f"P-value ({alternative})", f"{res_f['p_value']:.4f}")
-                c3.metric(
+                st.metric(
                     "Confidence Interval",
                     f"({res_f['ci'][0]:.4f}, {res_f['ci'][1]:.4f})",
                 )
@@ -168,7 +168,7 @@ def render_twopop_variances_page():
             if st.button("Run Levene's Test", key="btn_run_levene"):
                 with st.spinner("Computing Levene statistics..."):
                     stat, p_val_l, ci_l, code_l, is_sampled = perform_levene(
-                        df_filtrado, selected_num_col, selected_cat_col, confidence
+                        df_filtrado, selected_num_col, selected_cat_col, selected_categories, confidence
                     )
                     state["levene"] = {
                         "stat": stat,
@@ -180,10 +180,10 @@ def render_twopop_variances_page():
 
             if "levene" in state:
                 res_l = state["levene"]
-                c1, c2, c3 = st.columns(3)
+                c1, c2 = st.columns(2)
                 c1.metric("Levene Statistic", f"{res_l['stat']:.4f}")
                 c2.metric("P-value", f"{res_l['p_value']:.4f}")
-                c3.metric(
+                st.metric(
                     "Confidence Interval",
                     f"({res_l['ci'][0]:.4f}, {res_l['ci'][1]:.4f})",
                 )
@@ -227,7 +227,7 @@ def render_twopop_variances_page():
                             ci_source = "Levene's Test"
                     
                     sample_variance_ratio, code_ratio = get_sample_variance_ratio(
-                        df_filtrado, selected_num_col, selected_cat_col
+                        df_filtrado, selected_num_col, selected_cat_col, selected_categories
                     )
 
                     # 3. Graficamos

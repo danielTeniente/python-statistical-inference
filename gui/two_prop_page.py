@@ -183,14 +183,14 @@ def render_twoprop_test_page():
         if "results" in state:
             res = state["results"]
             
-            c1, c2, c3 = st.columns(3)
+            c1, c2 = st.columns(2)
             
             # Manejar el caso donde Fisher's Exact puede retornar None para Odds Ratio
             stat_display = f"{res['stat']:.4f}" if res['stat'] is not None else "N/A"
             
             c1.metric(res['stat_label'], stat_display)
             c2.metric(f"p-value ({alternative})", f"{res['p_val']:.4f}")
-            c3.metric("Confidence Interval", f"({res['ci'][0]:.4f}, {res['ci'][1]:.4f})")
+            st.metric("Confidence Interval", f"({res['ci'][0]:.4f}, {res['ci'][1]:.4f})")
             
             st.markdown("#### Logic")
             st.markdown(f"**Test ({selected_test}):**")

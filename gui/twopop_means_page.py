@@ -127,8 +127,9 @@ def render_twopop_means_page():
     with st.expander("🧪 1. T-Test for Means Comparison", expanded=not state.get("ttest")):
         if st.button("Run T-Test", key="btn_run_ttest"):
             with st.spinner("Computing T-test statistics..."):
+                # PASAMOS selected_categories COMO ARGUMENTO AQUÍ:
                 t_stat, p_value, ci, code = perform_ttest(
-                    df_filtrado, selected_num_col, selected_cat_col,
+                    df_filtrado, selected_num_col, selected_cat_col, selected_categories,
                     alternative, confidence, equal_var
                 )
                 state["ttest"] = {
@@ -143,10 +144,10 @@ def render_twopop_means_page():
 
         if "ttest" in state:
             res = state["ttest"]
-            col_m1, col_m2, col_m3 = st.columns(3)
+            col_m1, col_m2 = st.columns(2)
             col_m1.metric("T-statistic", f"{res['stat']:.4f}")
             col_m2.metric(f"P-value ({alternative})", f"{res['p']:.4f}")
-            col_m3.metric(
+            st.metric(
                 "Confidence Interval",
                 f"({res['ci'][0]:.4f}, {res['ci'][1]:.4f})",
             )
@@ -163,7 +164,7 @@ def render_twopop_means_page():
 
                     # Utilizamos el df_filtrado aquí también
                     sample_diff, code_diff = get_sample_difference_in_means(
-                        df_filtrado, selected_num_col, selected_cat_col
+                        df_filtrado, selected_num_col, selected_cat_col, selected_categories
                     )
                     
                     # Asignamos dinámicamente los nombres al título usando las categorías seleccionadas

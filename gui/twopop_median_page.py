@@ -129,7 +129,7 @@ def render_twopop_medians_page():
             with st.spinner("Computing statistics..."):
                 # Pasamos df_filtrado a la función lógica
                 u_stat, p_value, ci, code, is_sampled = perform_mannwhitney(
-                    df_filtrado, selected_num_col, selected_cat_col, alternative, confidence
+                    df_filtrado, selected_num_col, selected_cat_col, selected_categories, alternative, confidence
                 )
                 state["mann_whitney"] = {
                     "u_stat": u_stat,
@@ -141,10 +141,10 @@ def render_twopop_medians_page():
 
         if "mann_whitney" in state:
             res = state["mann_whitney"]
-            col1_m, col2_m, col3_m = st.columns(3)
+            col1_m, col2_m = st.columns(2)
             col1_m.metric("U-statistic", f"{res['u_stat']:.4f}")
             col2_m.metric(f"P-value ({alternative})", f"{res['p_value']:.4f}")
-            col3_m.metric(
+            st.metric(
                 "Confidence Interval",
                 f"({res['ci'][0]:.4f}, {res['ci'][1]:.4f})",
             )
@@ -167,7 +167,7 @@ def render_twopop_medians_page():
                     
                     # Compute sample difference in medians usando df_filtrado
                     diff_medians, code_diff = get_sample_difference_in_medians(
-                        df_filtrado, selected_num_col, selected_cat_col
+                        df_filtrado, selected_num_col, selected_cat_col, selected_categories
                     )
                     
                     name1, name2 = selected_categories[0], selected_categories[1]

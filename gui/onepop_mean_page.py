@@ -77,9 +77,9 @@ def render_onepop_mean_page():
         if "analysis" in state:
             r = state["analysis"]
             
-            res_c1, res_c2, res_c3 = st.columns(3)
+            res_c1, res_c2 = st.columns(2)
             res_c1.metric("t-statistic", f"{r['statistic']:.4f}")
             res_c2.metric("p-value", f"{r['pvalue']:.4f}")
-            res_c3.metric("Confidence Interval", f"({r['ci'][0]:.4f}, {r['ci'][1]:.4f})")
+            st.metric("Confidence Interval", f"({r['ci'][0]:.4f}, {r['ci'][1]:.4f})")
             
             show_code(r["code"])

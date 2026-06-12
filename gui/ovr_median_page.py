@@ -99,10 +99,10 @@ def render_ovr_medians_page():
             if res.get("is_sampled"):
                 st.info("ℹ️ **Note:** Calculating Bootstrap confidence intervals on very large datasets (>5000 rows) causes memory overflow. The data was proportionately sampled to maintain structural integrity and performance.")
                 
-            m1, m2, m3 = st.columns(3)
+            m1, m2 = st.columns(2)
             m1.metric("U-statistic", f"{res['u_stat']:.4f}")
             m2.metric(f"P-value ({alternative})", f"{res['p_value']:.4f}")
-            m3.metric("Confidence Interval", f"({res['ci'][0]:.4f}, {res['ci'][1]:.4f})")
+            st.metric("Confidence Interval", f"({res['ci'][0]:.4f}, {res['ci'][1]:.4f})")
             show_code(res["code"])
 
     # SECTION: CI Plot

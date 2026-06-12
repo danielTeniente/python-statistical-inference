@@ -42,19 +42,12 @@ def apply_safety_sampling(data1, data2, var1_name="data1", var2_name="data2", li
 # STATISTICAL TESTS
 # ===========================================================================
 
-def perform_ftest(df, num_col, cat_col, alternative='two-sided', confidence=0.95):
-    """
-    Perform F-test to compare variances of two independent samples 
-    grouped by a categorical column.
-    """
+def perform_ftest(df, num_col, cat_col, selected_categories, alternative='two-sided', confidence=0.95):
     df_clean = df.dropna(subset=[cat_col])
-    categories = df_clean[cat_col].unique()
-    group1_name, group2_name = categories[0], categories[1]
+    group1_name, group2_name = selected_categories[0], selected_categories[1]
 
-    mask = df_clean[cat_col] == group1_name
-
-    data1 = df_clean.loc[mask, num_col].dropna()
-    data2 = df_clean.loc[~mask, num_col].dropna()
+    data1 = df_clean.loc[df_clean[cat_col] == group1_name, num_col].dropna()
+    data2 = df_clean.loc[df_clean[cat_col] == group2_name, num_col].dropna()
 
     f_stat = np.var(data1, ddof=1) / np.var(data2, ddof=1)
     ddof1, ddof2 = len(data1) - 1, len(data2) - 1
@@ -74,16 +67,13 @@ def perform_ftest(df, num_col, cat_col, alternative='two-sided', confidence=0.95
     upper_bound = f_stat / f.ppf(alpha/2, ddof1, ddof2)
     ci = (lower_bound, upper_bound)
 
-    # --- Code generation (reproducible snippet) ---
     code = "import numpy as np\n"
     code += "from scipy.stats import f\n\n"
-    
-    code += f"# Drop rows with missing values in '{cat_col}' and filter groups\n"
+    code += f"# Drop rows with missing values and filter groups\n"
     code += f"df_clean = df.dropna(subset=['{cat_col}'])\n"
-    code += f"mask = df_clean['{cat_col}'] == '{group1_name}'\n"
-    code += f"data1 = df_clean.loc[mask, '{num_col}'].dropna()\n"
-    code += f"data2 = df_clean.loc[~mask, '{num_col}'].dropna()\n\n"
-    
+    code += f"group1, group2 = '{group1_name}', '{group2_name}'\n"
+    code += f"data1 = df_clean.loc[df_clean['{cat_col}'] == group1, '{num_col}'].dropna()\n"
+    code += f"data2 = df_clean.loc[df_clean['{cat_col}'] == group2, '{num_col}'].dropna()\n\n"
     code += "f_stat = np.var(data1, ddof=1) / np.var(data2, ddof=1)\n"
     code += "ddof1, ddof2 = len(data1)-1, len(data2)-1\n\n"
     
@@ -95,9 +85,8 @@ def perform_ftest(df, num_col, cat_col, alternative='two-sided', confidence=0.95
         code += "p_value = 1 - f.cdf(f_stat, ddof1, ddof2)\n"
 
     code += "print(f'F-statistic: {f_stat:.4f}')\n"
-    code += "print(f'p-value: {p_value:.4f}')\n"
-
-    code += f"\n# Confidence interval for the ratio of variances\n"
+    code += "print(f'p-value: {p_value:.4f}')\n\n"
+    code += f"# Confidence interval for the ratio of variances\n"
     code += f"alpha = 1 - {confidence}\n"
     code += "lower_bound = f_stat / f.ppf(1 - alpha/2, ddof1, ddof2)\n"
     code += "upper_bound = f_stat / f.ppf(alpha/2, ddof1, ddof2)\n"
@@ -105,23 +94,17 @@ def perform_ftest(df, num_col, cat_col, alternative='two-sided', confidence=0.95
 
     return f_stat, p_values[alternative], ci, code
 
-def perform_levene(df, num_col, cat_col, confidence=0.95):
-    """
-    Perform Levene's test for equal variances and compute a bootstrap confidence
-    interval for the ratio of variances.
-    """
+def perform_levene(df, num_col, cat_col, selected_categories, confidence=0.95):
     df_clean = df.dropna(subset=[cat_col])
-    categories = df_clean[cat_col].unique()
-    group1_name, group2_name = categories[0], categories[1]
+    group1_name, group2_name = selected_categories[0], selected_categories[1]
 
-    mask = df_clean[cat_col] == group1_name
-    data1_full = df_clean.loc[mask, num_col].dropna()
-    data2_full = df_clean.loc[~mask, num_col].dropna()
+    data1_full = df_clean.loc[df_clean[cat_col] == group1_name, num_col].dropna()
+    data2_full = df_clean.loc[df_clean[cat_col] == group2_name, num_col].dropna()
 
     # Levene's test
     stat, p_value = stats.levene(data1_full, data2_full, center='median')
 
-    # ---------- Bootstrap CI with Refactored Safety Undersampling ----------
+    # Bootstrap CI
     data1_boot, data2_boot, is_sampled, sampling_code = apply_safety_sampling(
         data1_full, data2_full, var1_name="data1", var2_name="data2"
     )
@@ -136,23 +119,18 @@ def perform_levene(df, num_col, cat_col, confidence=0.95):
     ).confidence_interval
     ci_tuple = (ci.low, ci.high)
 
-    # --- Code generation (reproducible snippet) ---
-    code = "import numpy as np\n"
-    code += "from scipy import stats\n\n"
-    
+    code = "import numpy as np\nfrom scipy import stats\n\n"
     code += "# Data preparation\n"
     code += f"df_clean = df.dropna(subset=['{cat_col}'])\n"
-    code += f"mask = df_clean['{cat_col}'] == '{group1_name}'\n"
-    code += f"data1 = df_clean.loc[mask, '{num_col}'].dropna()\n"
-    code += f"data2 = df_clean.loc[~mask, '{num_col}'].dropna()\n\n"
-    
+    code += f"group1, group2 = '{group1_name}', '{group2_name}'\n"
+    code += f"data1 = df_clean.loc[df_clean['{cat_col}'] == group1, '{num_col}'].dropna()\n"
+    code += f"data2 = df_clean.loc[df_clean['{cat_col}'] == group2, '{num_col}'].dropna()\n\n"
     code += "stat, p_value = stats.levene(data1, data2, center='median')\n"
     code += "print(f'Levene statistic: {stat:.4f}')\n"
     code += "print(f'p-value: {p_value:.4f}')\n\n"
-
     code += "# Bootstrap CI for ratio of variances\n"
     code += sampling_code
-    code += f"boot_data = (data1_ci, data2_ci)\n"
+    code += "boot_data = (data1_ci, data2_ci)\n"
     code += "ci = stats.bootstrap(\n"
     code += "    boot_data,\n"
     code += "    lambda x, y, axis=-1: np.var(x, ddof=1, axis=axis) / np.var(y, ddof=1, axis=axis),\n"
@@ -164,20 +142,13 @@ def perform_levene(df, num_col, cat_col, confidence=0.95):
 
     return stat, p_value, ci_tuple, code, is_sampled
 
-
 def perform_ttest(df, num_col, cat_col, selected_categories, alternative='two-sided', confidence=0.95, equal_var=True):
-    """Perform T-test using SciPy's built-in function, respecting the selection order."""
     df_clean = df.dropna(subset=[cat_col])
     
-    # Extraemos explícitamente el orden seleccionado por el usuario
     group1, group2 = selected_categories[0], selected_categories[1]
 
-    # Filtramos usando las variables directamente
-    mask1 = df_clean[cat_col] == group1
-    mask2 = df_clean[cat_col] == group2
-    
-    x1 = df_clean.loc[mask1, num_col].dropna()
-    x2 = df_clean.loc[mask2, num_col].dropna()
+    x1 = df_clean.loc[df_clean[cat_col] == group1, num_col].dropna()
+    x2 = df_clean.loc[df_clean[cat_col] == group2, num_col].dropna()
 
     res = stats.ttest_ind(x1, x2, equal_var=equal_var, alternative=alternative)
     t_stat = res.statistic
@@ -185,7 +156,6 @@ def perform_ttest(df, num_col, cat_col, selected_categories, alternative='two-si
     ci_obj = res.confidence_interval(confidence_level=confidence)
     ci_tuple = (ci_obj.low, ci_obj.high)
 
-    # Actualizamos el código que se muestra al usuario para reflejar el orden
     code = "from scipy import stats\n\n"
     code += f"# Prepare data\n"
     code += f"df_clean = df.dropna(subset=['{cat_col}'])\n"
@@ -200,22 +170,18 @@ def perform_ttest(df, num_col, cat_col, selected_categories, alternative='two-si
 
     return t_stat, p_val, ci_tuple, code
 
-def perform_mannwhitney(df, num_col, cat_col, alternative='two-sided', confidence=0.95):
-    """Perform Mann-Whitney U test with bootstrap CI for difference of medians."""
+def perform_mannwhitney(df, num_col, cat_col, selected_categories, alternative='two-sided', confidence=0.95):
     df_clean = df.dropna(subset=[cat_col])
-    categories = df_clean[cat_col].unique()
-    group1, group2 = categories[0], categories[1]
+    group1, group2 = selected_categories[0], selected_categories[1]
 
-    mask = df_clean[cat_col] == group1
-    x1_full = df_clean.loc[mask, num_col].dropna()
-    x2_full = df_clean.loc[~mask, num_col].dropna()
+    x1_full = df_clean.loc[df_clean[cat_col] == group1, num_col].dropna()
+    x2_full = df_clean.loc[df_clean[cat_col] == group2, num_col].dropna()
 
-    # Mann-Whitney test (fast, full data)
     res = stats.mannwhitneyu(x1_full, x2_full, alternative=alternative)
     u_stat = res.statistic
     p_val = res.pvalue
 
-    # ---------- Bootstrap CI with Refactored Safety Undersampling ----------
+    # Bootstrap CI
     x1_boot, x2_boot, is_sampled, sampling_code = apply_safety_sampling(
         x1_full, x2_full, var1_name="x1", var2_name="x2"
     )
@@ -233,13 +199,12 @@ def perform_mannwhitney(df, num_col, cat_col, alternative='two-sided', confidenc
     code = "import numpy as np\nfrom scipy import stats\n\n"
     code += "# Data preparation\n"
     code += f"df_clean = df.dropna(subset=['{cat_col}'])\n"
-    code += f"mask = df_clean['{cat_col}'] == '{group1}'\n"
-    code += f"x1 = df_clean.loc[mask, '{num_col}'].dropna()\n"
-    code += f"x2 = df_clean.loc[~mask, '{num_col}'].dropna()\n\n"
+    code += f"group1, group2 = '{group1}', '{group2}'\n"
+    code += f"x1 = df_clean.loc[df_clean['{cat_col}'] == group1, '{num_col}'].dropna()\n"
+    code += f"x2 = df_clean.loc[df_clean['{cat_col}'] == group2, '{num_col}'].dropna()\n\n"
     code += f"res = stats.mannwhitneyu(x1, x2, alternative='{alternative}')\n"
     code += "print(f'U-statistic: {res.statistic:.4f}')\n"
     code += "print(f'p-value: {res.pvalue:.4f}')\n\n"
-
     code += sampling_code
     code += "boot_data = (x1_ci, x2_ci)\n"
     code += "ci_obj = stats.bootstrap(\n"
@@ -253,65 +218,56 @@ def perform_mannwhitney(df, num_col, cat_col, alternative='two-sided', confidenc
 
     return u_stat, p_val, ci_tuple, code, is_sampled
 
-def get_sample_difference_in_means(df, num_col, cat_col):
-    """Calculate the difference in means between two groups."""
+def get_sample_difference_in_means(df, num_col, cat_col, selected_categories):
     df_clean = df.dropna(subset=[cat_col])
-    categories = df_clean[cat_col].unique()
-    group1, group2 = categories[0], categories[1]
+    group1, group2 = selected_categories[0], selected_categories[1]
 
-    mask = df_clean[cat_col] == group1
-    mean1 = df_clean.loc[mask, num_col].dropna().mean()
-    mean2 = df_clean.loc[~mask, num_col].dropna().mean()
+    mean1 = df_clean.loc[df_clean[cat_col] == group1, num_col].dropna().mean()
+    mean2 = df_clean.loc[df_clean[cat_col] == group2, num_col].dropna().mean()
 
     code = f"df_clean = df.dropna(subset=['{cat_col}'])\n"
-    code += f"mask = df_clean['{cat_col}'] == '{group1}'\n"
-    code += f"mean1 = df_clean.loc[mask, '{num_col}'].dropna().mean()\n"
-    code += f"mean2 = df_clean.loc[~mask, '{num_col}'].dropna().mean()\n"
+    code += f"group1, group2 = '{group1}', '{group2}'\n"
+    code += f"mean1 = df_clean.loc[df_clean['{cat_col}'] == group1, '{num_col}'].dropna().mean()\n"
+    code += f"mean2 = df_clean.loc[df_clean['{cat_col}'] == group2, '{num_col}'].dropna().mean()\n"
     code += "diff_means = mean1 - mean2\n"
     code += "print(f'Difference in means: {diff_means:.4f}')\n"
 
     return mean1 - mean2, code
 
-def get_sample_difference_in_medians(df, num_col, cat_col):
-    """Calculate the difference in medians between two groups."""
+def get_sample_difference_in_medians(df, num_col, cat_col, selected_categories):
+    """Calculate the difference in medians between two groups (A - B)."""
     df_clean = df.dropna(subset=[cat_col])
-    categories = df_clean[cat_col].unique()
-    group1, group2 = categories[0], categories[1]
+    group1, group2 = selected_categories[0], selected_categories[1]
 
-    mask = df_clean[cat_col] == group1
-    median1 = df_clean.loc[mask, num_col].dropna().median()
-    median2 = df_clean.loc[~mask, num_col].dropna().median()
+    median1 = df_clean.loc[df_clean[cat_col] == group1, num_col].dropna().median()
+    median2 = df_clean.loc[df_clean[cat_col] == group2, num_col].dropna().median()
 
     code = f"df_clean = df.dropna(subset=['{cat_col}'])\n"
-    code += f"mask = df_clean['{cat_col}'] == '{group1}'\n"
-    code += f"median1 = df_clean.loc[mask, '{num_col}'].dropna().median()\n"
-    code += f"median2 = df_clean.loc[~mask, '{num_col}'].dropna().median()\n"
+    code += f"group1, group2 = '{group1}', '{group2}'\n"
+    code += f"median1 = df_clean.loc[df_clean['{cat_col}'] == group1, '{num_col}'].dropna().median()\n"
+    code += f"median2 = df_clean.loc[df_clean['{cat_col}'] == group2, '{num_col}'].dropna().median()\n"
     code += "diff_medians = median1 - median2\n"
     code += "print(f'Difference in medians: {diff_medians:.4f}')\n"
 
     return median1 - median2, code
 
-def get_sample_variance_ratio(df, num_col, cat_col):
-    """Calculate the ratio of variances between two groups."""
+def get_sample_variance_ratio(df, num_col, cat_col, selected_categories):
+    """Calculate the ratio of variances between two groups (A / B)."""
     df_clean = df.dropna(subset=[cat_col])
-    categories = df_clean[cat_col].unique()
-    group1, group2 = categories[0], categories[1]
+    group1, group2 = selected_categories[0], selected_categories[1]
 
-    mask = df_clean[cat_col] == group1
-    # Usamos ddof=1 para obtener la varianza muestral (es el default en pandas, pero es buena práctica explicitarlo)
-    var1 = df_clean.loc[mask, num_col].dropna().var(ddof=1)
-    var2 = df_clean.loc[~mask, num_col].dropna().var(ddof=1)
+    var1 = df_clean.loc[df_clean[cat_col] == group1, num_col].dropna().var(ddof=1)
+    var2 = df_clean.loc[df_clean[cat_col] == group2, num_col].dropna().var(ddof=1)
 
-    # Prevenir divisiones por cero en caso de que la varianza del grupo 2 sea 0
     if var2 == 0:
         ratio = float('inf') 
     else:
         ratio = var1 / var2
 
     code = f"df_clean = df.dropna(subset=['{cat_col}'])\n"
-    code += f"mask = df_clean['{cat_col}'] == '{group1}'\n"
-    code += f"var1 = df_clean.loc[mask, '{num_col}'].dropna().var(ddof=1)\n"
-    code += f"var2 = df_clean.loc[~mask, '{num_col}'].dropna().var(ddof=1)\n"
+    code += f"group1, group2 = '{group1}', '{group2}'\n"
+    code += f"var1 = df_clean.loc[df_clean['{cat_col}'] == group1, '{num_col}'].dropna().var(ddof=1)\n"
+    code += f"var2 = df_clean.loc[df_clean['{cat_col}'] == group2, '{num_col}'].dropna().var(ddof=1)\n"
     code += "variance_ratio = var1 / var2\n"
     code += "print(f'Variance ratio ({group1} / {group2}): {variance_ratio:.4f}')\n"
 

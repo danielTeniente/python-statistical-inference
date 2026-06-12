@@ -98,7 +98,7 @@ def render_correlation_page():
             corr_val, p_val, ci_low, ci_high, code_str = st.session_state.corr_results["calc"]
             
             # Display metrics dynamically based on chosen confidence
-            res1, res2, res3 = st.columns(3)
+            res1, res2 = st.columns(2)
             ci_label_percent = f"{confidence*100:.0f}%"
             
             if selected_method == "Pearson":
@@ -110,7 +110,7 @@ def render_correlation_page():
                 
             res1.metric(metric_name, f"{corr_val:.4f}")
             res2.metric("P-value", f"{p_val:.4f}")
-            res3.metric(ci_name, f"[{ci_low:.4f}, {ci_high:.4f}]")
+            st.metric(ci_name, f"[{ci_low:.4f}, {ci_high:.4f}]")
             
             show_code(code_str)
 

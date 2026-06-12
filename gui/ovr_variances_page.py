@@ -123,10 +123,10 @@ def render_ovr_variances_page():
                 res_f = state["ftest"]
                 show_code(res_f["code"])
                 
-                f1, f2, f3 = st.columns(3)
+                f1, f2 = st.columns(2)
                 f1.metric("F-statistic", f"{res_f['stat']:.4f}")
                 f2.metric(f"P-value ({alternative})", f"{res_f['p_value']:.4f}")
-                f3.metric("Confidence Interval", f"({res_f['ci'][0]:.4f}, {res_f['ci'][1]:.4f})")
+                st.metric("Confidence Interval", f"({res_f['ci'][0]:.4f}, {res_f['ci'][1]:.4f})")
 
         # --- LEVENE'S TEST LOGIC ---
         elif selected_test == "Levene's Test for Equality of Variances":
@@ -147,10 +147,10 @@ def render_ovr_variances_page():
                 res_l = state["levene"]
                 show_code(res_l["code"])
                 
-                l1, l2, l3 = st.columns(3)
+                l1, l2 = st.columns(2)
                 l1.metric("Levene Statistic", f"{res_l['stat']:.4f}")
                 l2.metric("P-value", f"{res_l['p_value']:.4f}")
-                l3.metric("Confidence Interval", f"({res_l['ci'][0]:.4f}, {res_l['ci'][1]:.4f})")
+                st.metric("Confidence Interval", f"({res_l['ci'][0]:.4f}, {res_l['ci'][1]:.4f})")
                 
                 # Rule 3: Transparency regarding Undersampling for Bootstrap CI in Levene's
                 if res_l.get("is_sampled"):
