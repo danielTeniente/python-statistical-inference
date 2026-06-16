@@ -101,6 +101,7 @@ def render_ovr_means_page():
             m1, m2 = st.columns(2)
             m1.metric("T-statistic", f"{res['t_stat']:.4f}")
             m2.metric(f"P-value ({alternative})", f"{res['p_value']:.4f}")
+            st.markdown(rf"**CI for the Difference in Means** ($\mu_{{{target_cat}}} - \mu_{{{"Rest"}}}$)")
             st.metric("Confidence Interval", f"({res['ci'][0]:.4f}, {res['ci'][1]:.4f})")
             show_code(res["code"])
 

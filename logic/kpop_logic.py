@@ -17,7 +17,7 @@ def perform_bartlett(df, num_col, cat_col):
 
     code = "from scipy import stats\n\n"
     code += f"# Fast grouping using pandas groupby\n"
-    code += f"grouped = df[['{cat_col}', '{num_col}']].dropna().groupby('{cat_col}')['{num_col}']\n"
+    code += f"grouped = df[['{cat_col}', '{num_col}']].dropna().groupby('{cat_col}', observed=False)['{num_col}']\n"
     code += "data_arrays = [group.values for name, group in grouped if len(group) > 0]\n\n"
     code += f"# Perform Bartlett's test\n"
     code += "stat, p_value = stats.bartlett(*data_arrays)\n\n"
@@ -28,13 +28,13 @@ def perform_bartlett(df, num_col, cat_col):
 
 def perform_levene(df, num_col, cat_col):
     """Perform Levene's test for equal variances."""
-    grouped = df[[cat_col, num_col]].dropna().groupby(cat_col)[num_col]
+    grouped = df[[cat_col, num_col]].dropna().groupby(cat_col, observed=False)[num_col]
     data_arrays = [group.values for name, group in grouped if len(group) > 0]
     
     stat, p_value = stats.levene(*data_arrays, center='median')
     
     code = "from scipy import stats\n\n"
-    code += f"grouped = df[['{cat_col}', '{num_col}']].dropna().groupby('{cat_col}')['{num_col}']\n"
+    code += f"grouped = df[['{cat_col}', '{num_col}']].dropna().groupby('{cat_col}', observed=False)['{num_col}']\n"
     code += "data_arrays = [group.values for name, group in grouped if len(group) > 0]\n\n"
     code += "stat, p_value = stats.levene(*data_arrays, center='median')\n\n"
     code += "print(f'Levene statistic: {stat:.4f}')\n"
@@ -44,13 +44,13 @@ def perform_levene(df, num_col, cat_col):
 
 def perform_oneway_anova(df, num_col, cat_col):
     """Perform one-way ANOVA."""
-    grouped = df[[cat_col, num_col]].dropna().groupby(cat_col)[num_col]
+    grouped = df[[cat_col, num_col]].dropna().groupby(cat_col, observed=False)[num_col]
     data_arrays = [group.values for name, group in grouped if len(group) > 0]
     
     stat, p_value = stats.f_oneway(*data_arrays)
     
     code = "from scipy import stats\n\n"
-    code += f"grouped = df[['{cat_col}', '{num_col}']].dropna().groupby('{cat_col}')['{num_col}']\n"
+    code += f"grouped = df[['{cat_col}', '{num_col}']].dropna().groupby('{cat_col}', observed=False)['{num_col}']\n"
     code += "data_arrays = [group.values for name, group in grouped if len(group) > 0]\n\n"
     code += "stat, p_value = stats.f_oneway(*data_arrays)\n\n"
     code += "print(f'ANOVA F-statistic: {stat:.4f}')\n"
@@ -61,9 +61,8 @@ def perform_oneway_anova(df, num_col, cat_col):
 def perform_pairwise_tukeyhsd(df, num_col, cat_col, confidence=0.95):
     """
     Perform Tukey's HSD test for multiple comparisons grouped by a categorical column 
-    and generates a Forest Plot.
-    Assumes equal variances.
-    Returns the tukey result object, the matplotlib figure, and the generated Python code.
+    and generates a Forest Plot. Assumes equal variances.
+    Returns the corrected dataframe, the matplotlib figure, and the generated Python code.
     """
     alpha = 1 - confidence
     
@@ -74,10 +73,19 @@ def perform_pairwise_tukeyhsd(df, num_col, cat_col, confidence=0.95):
         columns=tukey_result._results_table.data[0]
     )
     
+    tukey_df["Evaluation"] = "Mean(" + tukey_df["group1"].astype(str) + ") - Mean(" + tukey_df["group2"].astype(str) + ")"
+    
+    tukey_df["diff"] = -tukey_df["meandiff"].astype(float)
+    
+    new_lower = -tukey_df["upper"].astype(float)
+    new_upper = -tukey_df["lower"].astype(float)
+    tukey_df["lower"] = new_lower
+    tukey_df["upper"] = new_upper
+
     comparisons = tukey_df["group1"].astype(str) + " - " + tukey_df["group2"].astype(str)
-    mean_diff = tukey_df["meandiff"].astype(float)
-    ci_low = tukey_df["lower"].astype(float)
-    ci_high = tukey_df["upper"].astype(float)
+    mean_diff = tukey_df["diff"]
+    ci_low = tukey_df["lower"]
+    ci_high = tukey_df["upper"]
 
     left_dist = mean_diff - ci_low
     right_dist = ci_high - mean_diff
@@ -89,11 +97,7 @@ def perform_pairwise_tukeyhsd(df, num_col, cat_col, confidence=0.95):
     
     ax.errorbar(x=mean_diff, y=comparisons,
                 xerr=[left_dist, right_dist], 
-                fmt='o', 
-                color='#1f77b4', 
-                markersize=8, 
-                capsize=5, 
-                linewidth=2,
+                fmt='o', color='#1f77b4', markersize=8, capsize=5, linewidth=2,
                 label=f'Estimate ({int(confidence*100)}% CI)')
 
     ax.set_xlabel("Mean Difference", fontsize=11)
@@ -108,20 +112,27 @@ def perform_pairwise_tukeyhsd(df, num_col, cat_col, confidence=0.95):
     
     code += f"# Drop rows with missing values in either column\n"
     code += f"data = df[['{num_col}', '{cat_col}']].dropna()\n\n"
-    
+
     code += f"# Perform Tukey HSD test\n"
     code += f"tukey_result = pairwise_tukeyhsd(endog=data['{num_col}'], groups=data['{cat_col}'], alpha={alpha:.2f})\n"
-    code += "print(tukey_result)\n\n"
     
-    code += "# Extract data for plotting\n"
-    code += "tukey_df = pd.DataFrame(data=tukey_result._results_table.data[1:], columns=tukey_result._results_table.data[0])\n"
+    code += "tukey_df = pd.DataFrame(data=tukey_result._results_table.data[1:], columns=tukey_result._results_table.data[0])\n\n"
+    
+    code += "# Fixing Tukey's default order to be Group1 - Group2\n"
+    code += "tukey_df['Evaluation'] = 'Mean(' + tukey_df['group1'].astype(str) + ') - Mean(' + tukey_df['group2'].astype(str) + ')'\n"
+    code += "tukey_df['diff'] = -tukey_df['meandiff'].astype(float)\n"
+    code += "new_lower = -tukey_df['upper'].astype(float)\n"
+    code += "new_upper = -tukey_df['lower'].astype(float)\n"
+    code += "tukey_df['lower'] = new_lower\n"
+    code += "tukey_df['upper'] = new_upper\n\n"
+    
+    code += "display_cols = ['Evaluation', 'diff', 'lower', 'upper', 'p-adj', 'reject']\n"
+    code += "print(tukey_df[display_cols].round(4))\n\n"
+    
     code += "comparisons = tukey_df['group1'].astype(str) + ' - ' + tukey_df['group2'].astype(str)\n"
-    code += "mean_diff = tukey_df['meandiff'].astype(float)\n"
-    code += "ci_low = tukey_df['lower'].astype(float)\n"
-    code += "ci_high = tukey_df['upper'].astype(float)\n\n"
-    
-    code += "left_dist = mean_diff - ci_low\n"
-    code += "right_dist = ci_high - mean_diff\n\n"
+    code += "mean_diff = tukey_df['diff']\n"
+    code += "left_dist = mean_diff - tukey_df['lower']\n"
+    code += "right_dist = tukey_df['upper'] - mean_diff\n\n"
     
     code += f"fig, ax = plt.subplots(figsize=(8, {len(comparisons) * 0.8 + 1.5:.1f}))\n"
     code += "ax.axvline(x=0, color='red', linestyle='--', linewidth=2, label='H₀ (No difference)')\n"
@@ -133,19 +144,18 @@ def perform_pairwise_tukeyhsd(df, num_col, cat_col, confidence=0.95):
     code += "fig.tight_layout()\n"
     code += "plt.show()\n"
 
-    return tukey_result, fig, code
+    display_cols = ['group1', 'group2', 'Evaluation', 'diff', 'lower', 'upper', 'p-adj', 'reject']
+    return tukey_df[display_cols], fig, code
 
 def perform_pairwise_gameshowell(df, num_col, cat_col, confidence=0.95):
     """
     Perform Games-Howell post-hoc test for multiple comparisons using Pingouin,
     grouped by a categorical column.
-    Recalculates the Confidence Interval directly from standard error and df.
     """
-    # 1. Clean data: drop rows where either the numeric or categorical value is missing
+    # 1. Clean data: drop rows with missing values
     data = df[[num_col, cat_col]].dropna()
     k = data[cat_col].nunique()
     
-    # 2. Perform Games-Howell test
     gh_result = pg.pairwise_gameshowell(data=data, dv=num_col, between=cat_col)
     
     # 3. Calculate Confidence Intervals
@@ -156,6 +166,7 @@ def perform_pairwise_gameshowell(df, num_col, cat_col, confidence=0.95):
     gh_result['lower'] = gh_result['diff'] - margin_of_error
     gh_result['upper'] = gh_result['diff'] + margin_of_error
     gh_result['is_significant'] = gh_result['pval'] < alpha
+    gh_result['Evaluation'] = "Mean(" + gh_result["A"].astype(str) + ") - Mean(" + gh_result["B"].astype(str) + ")"
 
     comparisons = gh_result["A"].astype(str) + " - " + gh_result["B"].astype(str)
     mean_diff = gh_result["diff"].astype(float)
@@ -198,12 +209,14 @@ def perform_pairwise_gameshowell(df, num_col, cat_col, confidence=0.95):
     
     code += "gh_result['lower'] = gh_result['diff'] - margin_of_error\n"
     code += "gh_result['upper'] = gh_result['diff'] + margin_of_error\n"
-    code += "gh_result['is_significant'] = gh_result['pval'] < alpha\n\n"
+    code += "gh_result['is_significant'] = gh_result['pval'] < alpha\n"
+    code += "gh_result['Evaluation'] = 'Mean(' + gh_result['A'].astype(str) + ') - Mean(' + gh_result['B'].astype(str) + ')'\n\n"
     
-    code += "display_columns = ['A', 'B', 'diff', 'pval', 'lower', 'upper', 'is_significant']\n"
+    code += "# Print detailed table\n"
+    code += "display_columns = ['Evaluation', 'diff', 'pval', 'lower', 'upper', 'is_significant']\n"
     code += "print(gh_result[display_columns].round(4))\n\n"
     
-    code += "# Plotting logic\n"
+    code += "# Plotting logic (Clean labels)\n"
     code += "comparisons = gh_result['A'].astype(str) + ' - ' + gh_result['B'].astype(str)\n"
     code += "left_dist = gh_result['diff'] - gh_result['lower']\n"
     code += "right_dist = gh_result['upper'] - gh_result['diff']\n\n"
@@ -218,19 +231,19 @@ def perform_pairwise_gameshowell(df, num_col, cat_col, confidence=0.95):
     code += "fig.tight_layout()\n"
     code += "plt.show()\n"
 
-    display_cols = ['A', 'B', 'diff', 'se', 'df', 'pval', 'lower', 'upper', 'is_significant']
+    display_cols = ['A', 'B', 'Evaluation', 'diff', 'se', 'df', 'pval', 'lower', 'upper', 'is_significant']
     
     return gh_result[display_cols], fig, code
 
 def perform_krustall_wallis(df, num_col, cat_col):
     """Perform Kruskal-Wallis H-test."""
-    grouped = df[[cat_col, num_col]].dropna().groupby(cat_col)[num_col]
+    grouped = df[[cat_col, num_col]].dropna().groupby(cat_col, observed=False)[num_col]
     data_arrays = [group.values for name, group in grouped if len(group) > 0]
     
     stat, p_value = stats.kruskal(*data_arrays)
     
     code = "from scipy import stats\n\n"
-    code += f"grouped = df[['{cat_col}', '{num_col}']].dropna().groupby('{cat_col}')['{num_col}']\n"
+    code += f"grouped = df[['{cat_col}', '{num_col}']].dropna().groupby('{cat_col}', observed=False)['{num_col}']\n"
     code += "data_arrays = [group.values for name, group in grouped if len(group) > 0]\n\n"
     code += "stat, p_value = stats.kruskal(*data_arrays)\n\n"
     code += "print(f'Kruskal-Wallis statistic: {stat:.4f}')\n"
@@ -247,7 +260,7 @@ def perform_bootstrap_pairwise_median(df, num_col, cat_col, confidence=0.95, n_r
     results = []
     
     # Fast grouping
-    grouped = df[[cat_col, num_col]].dropna().groupby(cat_col)[num_col]
+    grouped = df[[cat_col, num_col]].dropna().groupby(cat_col, observed=False)[num_col]
     
     # Extract keys safely
     categories = list(grouped.groups.keys())
@@ -275,6 +288,7 @@ def perform_bootstrap_pairwise_median(df, num_col, cat_col, confidence=0.95, n_r
         results.append({
             'A': cat1,
             'B': cat2,
+            'Evaluation': f"M({cat1}) - M({cat2})",
             'diff': diff,
             'lower': ci_obj.low,
             'upper': ci_obj.high
@@ -304,14 +318,13 @@ def perform_bootstrap_pairwise_median(df, num_col, cat_col, confidence=0.95, n_r
     ax.legend(loc='best')
     fig.tight_layout()
 
-    # --- CODE GENERATION (Modified to show the fast grouping approach) ---
     code = "import numpy as np\n"
     code += "import pandas as pd\n"
     code += "import matplotlib.pyplot as plt\n"
     code += "import itertools\n"
     code += "from scipy.stats import bootstrap\n\n"
     
-    code += f"grouped = df[['{cat_col}', '{num_col}']].dropna().groupby('{cat_col}')['{num_col}']\n"
+    code += f"grouped = df[['{cat_col}', '{num_col}']].dropna().groupby('{cat_col}', observed=False)['{num_col}']\n"
     code += "categories = list(grouped.groups.keys())\n"
     code += "results = []\n\n"
     
@@ -326,7 +339,7 @@ def perform_bootstrap_pairwise_median(df, num_col, cat_col, confidence=0.95, n_r
     code += f"        n_resamples={n_resamples}, \n"
     code += "        method='percentile'\n"
     code += "    ).confidence_interval\n\n"
-    code += "    results.append({'A': cat1, 'B': cat2, 'diff': diff, 'lower': ci_obj.low, 'upper': ci_obj.high})\n\n"
+    code += "    results.append({'A': cat1, 'B': cat2, 'Evaluation': f'$M_{{{cat1}}} - M_{{{cat2}}}$', 'diff': diff, 'lower': ci_obj.low, 'upper': ci_obj.high})\n\n"
     
     code += "res_df = pd.DataFrame(results)\n"
     code += "print(res_df.round(4))\n"

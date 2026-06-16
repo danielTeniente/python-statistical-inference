@@ -144,6 +144,7 @@ def render_twopop_medians_page():
             col1_m, col2_m = st.columns(2)
             col1_m.metric("U-statistic", f"{res['u_stat']:.4f}")
             col2_m.metric(f"P-value ({alternative})", f"{res['p_value']:.4f}")
+            st.markdown(rf"**CI for the Difference in Medians** ($M_{{{selected_categories[0]}}} - M_{{{selected_categories[1]}}}$)")
             st.metric(
                 "Confidence Interval",
                 f"({res['ci'][0]:.4f}, {res['ci'][1]:.4f})",

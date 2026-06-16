@@ -102,6 +102,7 @@ def render_ovr_medians_page():
             m1, m2 = st.columns(2)
             m1.metric("U-statistic", f"{res['u_stat']:.4f}")
             m2.metric(f"P-value ({alternative})", f"{res['p_value']:.4f}")
+            st.markdown(rf"**CI for the Difference in Medians** ($M_{{{target_cat}}} - M_{{{"Rest"}}}$)")
             st.metric("Confidence Interval", f"({res['ci'][0]:.4f}, {res['ci'][1]:.4f})")
             show_code(res["code"])
 

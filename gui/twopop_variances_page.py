@@ -86,7 +86,8 @@ def render_twopop_variances_page():
         )
     with col4:
         confidence = st.slider(
-            "Confidence level", 0.80, 0.99, 0.95, 0.01, key="tpv_conf"
+            "Confidence level", 
+            0.80, 0.99, 0.95, 0.01, key="tpv_conf"
         )
 
     st.text("🔍 Data Filtering Code")
@@ -157,6 +158,7 @@ def render_twopop_variances_page():
                 c1, c2 = st.columns(2)
                 c1.metric("F-statistic", f"{res_f['f_stat']:.4f}")
                 c2.metric(f"P-value ({alternative})", f"{res_f['p_value']:.4f}")
+                st.markdown(rf"**CI for the Variance Ratio** ($\sigma_{{{selected_categories[0]}}}^2 / \sigma_{{{selected_categories[1]}}}^2$)")
                 st.metric(
                     "Confidence Interval",
                     f"({res_f['ci'][0]:.4f}, {res_f['ci'][1]:.4f})",
@@ -183,6 +185,7 @@ def render_twopop_variances_page():
                 c1, c2 = st.columns(2)
                 c1.metric("Levene Statistic", f"{res_l['stat']:.4f}")
                 c2.metric("P-value", f"{res_l['p_value']:.4f}")
+                st.markdown(rf"**CI for the Variance Ratio** ($\sigma_{{{selected_categories[0]}}}^2 / \sigma_{{{selected_categories[1]}}}^2$)")
                 st.metric(
                     "Confidence Interval",
                     f"({res_l['ci'][0]:.4f}, {res_l['ci'][1]:.4f})",

@@ -147,6 +147,7 @@ def render_twopop_means_page():
             col_m1, col_m2 = st.columns(2)
             col_m1.metric("T-statistic", f"{res['stat']:.4f}")
             col_m2.metric(f"P-value ({alternative})", f"{res['p']:.4f}")
+            st.markdown(rf"**CI for the Difference in Means** ($\mu_{{{selected_categories[0]}}} - \mu_{{{selected_categories[1]}}}$)")
             st.metric(
                 "Confidence Interval",
                 f"({res['ci'][0]:.4f}, {res['ci'][1]:.4f})",
