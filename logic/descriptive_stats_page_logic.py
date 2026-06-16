@@ -150,50 +150,63 @@ def get_grouped_boxplot(df, column, cat_col):
 
 # Categorical variables
 
-def get_barplot(df, column):
+def get_barplot(df, column, is_relative=False):
     """
     Processes the data and returns the figure and the 
     equivalent Python code as a string.
     """
-    # 1. Crear la figura y los ejes
     fig, ax = plt.subplots(figsize=(15, 5))
     
-    # 2. Generar el gráfico asignándolo al eje (ax)
-    df[column].value_counts().sort_index().plot(
+    freq_data = df[column].value_counts(normalize=is_relative, dropna=True).sort_index()
+    if is_relative:
+        freq_data = freq_data * 100
+        
+    freq_data.plot(
         kind='bar',
         color='skyblue',
         edgecolor='black',
         ax=ax
     )
     
-    # 3. Configurar títulos y etiquetas
+    y_label = 'Relative Frequency (%)' if is_relative else 'Absolute Frequency'
+    
     ax.set_title(f'Bar Plot of {column}')
     ax.set_xlabel(f'{column}', fontsize=12)
-    ax.set_ylabel('Frequency', fontsize=12)
+    ax.set_ylabel(y_label, fontsize=12)
     ax.grid(alpha=0.3)
     
-    # 4. Generar el código en formato string
+    # 5. Generar el código en formato string
     code = "import matplotlib.pyplot as plt\n"
     code += "fig, ax = plt.subplots(figsize=(15, 5))\n"
-    code += f"df['{column}'].value_counts().sort_index().plot(kind='bar', color='skyblue', edgecolor='black', ax=ax)\n"
+    
+    if is_relative:
+        code += f"freq_data = df['{column}'].value_counts(normalize=True, dropna=True).sort_index() * 100\n"
+    else:
+        code += f"freq_data = df['{column}'].value_counts(normalize=False, dropna=True).sort_index()\n"
+        
+    code += "freq_data.plot(kind='bar', color='skyblue', edgecolor='black', ax=ax)\n"
     code += f"ax.set_title('Bar Plot of {column}')\n"
     code += f"ax.set_xlabel('{column}', fontsize=12)\n"
-    code += "ax.set_ylabel('Frequency', fontsize=12)\n"
+    code += f"ax.set_ylabel('{y_label}', fontsize=12)\n"
     code += "ax.grid(alpha=0.3)\n"
     code += "plt.show()"
     
-    # 5. Retornar ambos elementos
-    return fig, code  
+    # 6. Retornar ambos elementos
+    return fig, code
 
 def get_frequency_table(df, column) -> (pd.DataFrame, str):
-    abs_freq = df[column].value_counts().sort_index()
-    rel_freq = df[column].value_counts(normalize=True).sort_index() * 100
+    abs_freq = df[column].value_counts(dropna=True).sort_index()
+    rel_freq = df[column].value_counts(normalize=True, dropna=True).sort_index() * 100
 
     freq_table = pd.DataFrame([abs_freq, rel_freq])
     freq_table.index = ['Frequency', 'Relative (%)']
+    # add totals
+    freq_table['Total'] = freq_table.sum(axis=1)
 
-    code = f"abs_freq = df['{column}'].value_counts().sort_index()\n"
-    code += f"rel_freq = df['{column}'].value_counts(normalize=True).sort_index() * 100\n"
+    code = f"abs_freq = df['{column}'].value_counts(dropna=True).sort_index()\n"
+    code += f"rel_freq = df['{column}'].value_counts(normalize=True, dropna=True).sort_index() * 100\n"
     code += f"freq_table = pd.DataFrame([abs_freq, rel_freq])\n"
     code += f"freq_table.index = ['Frequency', 'Relative (%)']\n"
+    code += f"freq_table['Total'] = freq_table.sum(axis=1)\n"
+    
     return freq_table, code

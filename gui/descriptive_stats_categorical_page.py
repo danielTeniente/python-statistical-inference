@@ -55,12 +55,16 @@ def render_descriptive_categorical_page():
 
     # SECTION: Bar Plot
     with st.expander("📉 2. Visualization (Bar Plot)", expanded=False):
+        is_relative = st.checkbox("Show relative frequencies (%)", value=False, key="check_relative_bar")
+        
         if st.button("Generate Bar Plot", key="btn_bar_plot"):
             with st.spinner("Generating visualization..."):
-                fig, code_p = get_barplot(df, selected_column)
-                state["plot"] = {"fig": fig, "code": code_p}
+                fig, code_p = get_barplot(df, selected_column, is_relative=is_relative)
+                state["plot"] = {"fig": fig, "code": code_p, "is_relative": is_relative}
 
         if "plot" in state:
             res_p = state["plot"]
+            if res_p["is_relative"] != is_relative:
+                st.warning("⚠️ The plot was generated with a different setting. Please regenerate the plot to see the correct version.")
             show_code(res_p["code"])
             st.pyplot(res_p["fig"])
