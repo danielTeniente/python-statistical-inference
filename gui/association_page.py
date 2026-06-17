@@ -3,9 +3,9 @@ from logic.association_logic import (
     perform_cramers_v_test,
     perform_pearsons_c_test,
     perform_phi_coefficient_test,
-    perform_odds_ratio_test
+    perform_odds_ratio_test,
+    perform_kendall_correlation
 )
-from logic.correlation_logic import perform_kendall_correlation
 from logic.independence_logic import get_contingency_table 
 from gui.components import show_code
 
@@ -15,7 +15,7 @@ def get_valid_categorical_columns(df):
     return [col for col in df.columns if 2 <= df[col].dropna().nunique() <= 30]
 
 def render_association_measures_page():
-    st.title("📊 Measures of Association (Effect Size)")
+    st.title("📊 Measures of Association")
 
     # --- 1. Data Validation ---
     if "df" not in st.session_state or st.session_state.df is None:
@@ -24,7 +24,6 @@ def render_association_measures_page():
     
     df = st.session_state.df
 
-    # Usamos la función cacheada
     valid_cols = get_valid_categorical_columns(df)
 
     if len(valid_cols) < 2:
@@ -106,7 +105,7 @@ def render_association_measures_page():
                         state["results"] = {"type": "standard", "label": "Pearson's C", "val": val, "p": p, "code": code}
                     
                     elif selected_measure == "Kendall's Tau":
-                        kendall_coefficient, p, _, _, code = perform_kendall_correlation(df, var1_col, var2_col)
+                        kendall_coefficient, p, code = perform_kendall_correlation(df, var1_col, var2_col)
                         state["results"] = {"type": "standard", "label": "Kendall's Tau", "val": kendall_coefficient, "p": p, "code": code} 
 
                     elif selected_measure == "Phi Coefficient (φ)":

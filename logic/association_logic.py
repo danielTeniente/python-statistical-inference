@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from scipy.stats import chi2_contingency
+from scipy.stats import chi2_contingency, kendalltau
 from statsmodels.stats.contingency_tables import Table2x2
 
 # --- Internal Support Function (Backend) ---
@@ -113,3 +113,25 @@ def perform_odds_ratio_test(df, var1_col, var2_col):
     
     # Note: Returning a longer tuple here to accommodate the intervals
     return odds_ratio, ci_low, ci_high, p_value, code
+
+def perform_kendall_correlation(df, var1_col, var2_col):
+    """Performs Kendall Tau correlation test and calculates a Bootstrap {confidence_level*100:.0f}% Confidence Interval."""
+    clean_df = df[[var1_col, var2_col]].dropna()
+    x = clean_df[var1_col].values
+    y = clean_df[var2_col].values
+    
+    corr_coeff, p_value = kendalltau(x, y)
+    
+    code = (
+        "import pandas as pd\n"
+        "import numpy as np\n"
+        "from scipy.stats import kendalltau\n\n"
+        f"clean_df = df[['{var1_col}', '{var2_col}']].dropna()\n"
+        f"x = clean_df['{var1_col}'].values\n"
+        f"y = clean_df['{var2_col}'].values\n\n"
+        "corr_coeff, p_value = kendalltau(x, y)\n\n"
+        "print(f'Kendall\\'s Tau: {corr_coeff:.6f}')\n"
+        "print(f'P-value: {p_value:.4f}')\n"
+    )
+    
+    return corr_coeff, p_value, code

@@ -7,7 +7,6 @@ from logic.proportions_logic import (
 from logic.independence_logic import perform_fisher_exact_test, get_contingency_table
 from gui.components import show_code
 
-# --- HELPER FUNCTIONS CON CACHÉ ---
 @st.cache_data(show_spinner=False)
 def get_binary_columns(df):
     """Escanea el DataFrame una sola vez para encontrar columnas con exactamente 2 categorías."""
@@ -179,7 +178,6 @@ def render_twoprop_test_page():
                     "code_ci": code_ci
                 }
 
-        # Mostrar Resultados
         if "results" in state:
             res = state["results"]
             
@@ -190,6 +188,10 @@ def render_twoprop_test_page():
             
             c1.metric(res['stat_label'], stat_display)
             c2.metric(f"p-value ({alternative})", f"{res['p_val']:.4f}")
+            groups = sorted(df[group_col].dropna().unique())
+            g1 = groups[0]
+            g2 = groups[1]
+            st.markdown(f"**Confidence Interval ($p_{{{g1}}} - p_{{{g2}}}$):**")
             st.metric("Confidence Interval", f"({res['ci'][0]:.4f}, {res['ci'][1]:.4f})")
             
             st.markdown("#### Logic")

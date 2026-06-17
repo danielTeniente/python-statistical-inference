@@ -90,10 +90,12 @@ def create_categorical_column(df, source_col, new_col_name, bins, labels, right_
         ordered=is_ordinal
     )
     
+    str_bins = [f"{b:.2f}" if np.isfinite(b) else ("-np.inf" if b == -np.inf else "np.inf") for b in bins]
+    formatted_bins = "[" + ", ".join(str_bins) + "]"
     code = f"# Create a new categorical variable '{new_col_name}' based on '{source_col}'\n"
     code += "import numpy as np\n"
     code += "import pandas as pd\n\n"
-    code += f"bins = {bins}\n"
+    code += f"bins = {formatted_bins}\n"
     code += f"labels = {labels}\n"
     code += f"df['{new_col_name}'] = pd.cut(df['{source_col}'], bins=bins, labels=labels, right={right_inclusive}, ordered={is_ordinal})\n"
     

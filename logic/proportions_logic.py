@@ -133,7 +133,7 @@ def perform_two_proportion_ztest(df, group_col, outcome_col, alternative='two-si
     return statistic, p_value, code
 
 def get_two_proportion_confint(df, group_col, outcome_col, method='newcomb', confidence=0.95, success_term=None):
-    groups = df[group_col].dropna().unique()
+    groups = sorted(df[group_col].dropna().unique())
     if len(groups) != 2:
         raise ValueError("The grouping column must have exactly two unique values.")
 
