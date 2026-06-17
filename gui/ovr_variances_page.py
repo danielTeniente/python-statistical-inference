@@ -125,7 +125,7 @@ def render_ovr_variances_page():
                 f1, f2 = st.columns(2)
                 f1.metric("F-statistic", f"{res_f['stat']:.4f}")
                 f2.metric(f"P-value ({alternative})", f"{res_f['p_value']:.4f}")
-                st.markdown(f"**CI for the Variance Ratio** ($\sigma^2_{{{target_cat}}} / \sigma^2_{{{"Rest"}}}$)")
+                st.markdown(rf"**CI for the Variance Ratio** ($\sigma^2_{{{target_cat}}} / \sigma^2_{{{"Rest"}}}$)")
                 st.metric("Confidence Interval", f"({res_f['ci'][0]:.4f}, {res_f['ci'][1]:.4f})")
                 show_code(res_f["code"])
 
