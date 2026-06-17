@@ -32,8 +32,21 @@ def render_create_categorical_page():
     st.markdown("### Define Categories and Cutoffs")
     
     num_categories = st.number_input("How many categories do you want to create?", min_value=2, max_value=10, value=2)
-    right_inclusive = st.checkbox("Include right extreme in each interval (Right Inclusive)", value=True, 
-                                  help="If checked, the cutoff value belongs to the lower category (e.g., value <= cutoff). If unchecked, it belongs to the upper category (e.g., value < cutoff).")
+    
+    col_check1, col_check2 = st.columns(2)
+    with col_check1:
+        right_inclusive = st.checkbox(
+            "Include right extreme in each interval (Right Inclusive)", 
+            value=True, 
+            help="If checked, the cutoff value belongs to the lower category (e.g., value <= cutoff). If unchecked, it belongs to the upper category (e.g., value < cutoff)."
+        )
+    with col_check2:
+        is_ordinal = st.checkbox(
+            "Is Ordinal? (Ordered Categories)", 
+            value=True,
+            help="If checked, the categories will have an inherent logical order (e.g., Category 1 < Category 2 < Category 3)."
+        )
+    # ---------------------------------------------------------
     
     st.write("Define the **upper limit (cutoff)** and the **name** for each category:")
     
@@ -112,7 +125,8 @@ def render_create_categorical_page():
                 new_col_name=new_col_name, 
                 bins=bins, 
                 labels=labels, 
-                right_inclusive=right_inclusive
+                right_inclusive=right_inclusive,
+                is_ordinal=is_ordinal 
             )
             
             st.session_state.df = df_updated

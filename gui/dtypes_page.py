@@ -2,6 +2,7 @@ import pandas as pd
 import streamlit as st
 from gui.components import show_code
 from logic.basic_code import generate_save_code
+from pandas.api.types import CategoricalDtype
 
 def render_change_dtype_page():
     st.title("🔄 Change Column Data Type")
@@ -51,6 +52,30 @@ def render_change_dtype_page():
         target_dtype_label = st.selectbox("Select New Data Type", list(dtype_options.keys()))
         target_dtype = dtype_options[target_dtype_label]
 
+    # --- CATEGORY OPTIONS ---
+    is_ordinal = False
+    custom_order = []
+    
+    if target_dtype == "category":
+        st.markdown("#### Category Options")
+        
+        # Check unique values efficiently
+        num_uniques = df[selected_col].nunique()
+        
+        if num_uniques > 10:
+             st.info(f"💡 This column has {num_uniques} unique values. Ordinal sorting is disabled for columns with more than 10 unique values to prevent UI overload.")
+        else:
+             is_ordinal = st.checkbox("Make this category ordinal (ordered)?", value=False)
+             
+             if is_ordinal:
+                 unique_values = df[selected_col].dropna().unique().tolist()
+                 # Let the user define the order
+                 st.write("Drag and drop to define the order (lowest to highest):")
+                 custom_order = st.multiselect("Select categories in order:", options=unique_values, default=[])
+                 
+                 if len(custom_order) != len(unique_values):
+                     st.warning("⚠️ Please select all categories to define a complete order.")
+
     # 3. Educational Guide / Memory Optimization Tips
     dtype_guides = {
         "Categorical (category)": "🌟 **Highly Recommended for Memory:** Use this for text columns with few unique, repeating values (e.g., 'Country', 'Gender', 'Status'). It assigns a numeric code behind the scenes, reducing memory usage by up to 90% compared to strings.",
@@ -71,7 +96,12 @@ def render_change_dtype_page():
     st.divider()
     # 3. Action Button and Transformation Logic
     if st.button("Change Data Type", type="primary"):
-        if current_dtype == target_dtype:
+        # Extra validation for ordinal categories
+        if target_dtype == "category" and is_ordinal and len(custom_order) != df[selected_col].nunique():
+             st.error("❌ **Validation Error:** You must define the order for all unique categories before transforming.")
+             return
+             
+        if current_dtype == target_dtype and not (target_dtype == "category" and is_ordinal):
             st.info(f"💡 The column '{selected_col}' is already of type `{current_dtype}`. No changes needed.")
         else:
             try:
@@ -82,6 +112,14 @@ def render_change_dtype_page():
                 if target_dtype == "datetime64[ns]":
                     df_updated[selected_col] = pd.to_datetime(df_updated[selected_col])
                     generated_code = f"df['{selected_col}'] = pd.to_datetime(df['{selected_col}'])"
+                elif target_dtype == "category" and is_ordinal:
+                    # Apply categorical dtype with custom order
+                    cat_type = CategoricalDtype(categories=custom_order, ordered=True)
+                    df_updated[selected_col] = df_updated[selected_col].astype(cat_type)
+                    
+                    generated_code = f"from pandas.api.types import CategoricalDtype\n"
+                    generated_code += f"cat_type = CategoricalDtype(categories={custom_order}, ordered=True)\n"
+                    generated_code += f"df['{selected_col}'] = df['{selected_col}'].astype(cat_type)"
                 else:
                     df_updated[selected_col] = df_updated[selected_col].astype(target_dtype)
                     generated_code = f"df['{selected_col}'] = df['{selected_col}'].astype('{target_dtype}')"

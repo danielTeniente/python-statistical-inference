@@ -5,6 +5,7 @@ from logic.association_logic import (
     perform_phi_coefficient_test,
     perform_odds_ratio_test
 )
+from logic.correlation_logic import perform_kendall_correlation
 from logic.independence_logic import get_contingency_table 
 from gui.components import show_code
 
@@ -44,7 +45,7 @@ def render_association_measures_page():
     is_2x2 = (df[var1_col].nunique() == 2 and df[var2_col].nunique() == 2)
 
     # Construir opciones dinámicamente basadas en la forma de la tabla
-    measure_options = ["Cramér's V", "Pearson's Contingency Coefficient (C)"]
+    measure_options = ["Cramér's V", "Pearson's Contingency Coefficient (C)","Kendall's Tau"]
     if is_2x2:
         measure_options.extend(["Phi Coefficient (φ)", "Odds Ratio (OR)"])
 
@@ -52,6 +53,7 @@ def render_association_measures_page():
         "**Measure Recommendations:**\n\n"
         "📊 **Cramér's V:** Excellent general-purpose measure for tables of any size (0 to 1 scale).\n\n"
         "📈 **Pearson's C:** Another standard measure, but note its maximum value cannot reach 1.0 for non-square tables.\n\n"
+        "📉 **Kendall's Tau:** Measures ordinal association, useful when variables have a natural order.\n\n"
         "📏 **Phi Coefficient (φ):** Specifically designed for 2x2 tables (equivalent to Cramér's V for 2x2).\n\n"
         "🎲 **Odds Ratio (OR):** Compares the relative odds of the occurrence of the outcome of interest given exposure to the variable of interest (only for 2x2)."
     )
@@ -103,6 +105,10 @@ def render_association_measures_page():
                         val, p, code = perform_pearsons_c_test(df, var1_col, var2_col)
                         state["results"] = {"type": "standard", "label": "Pearson's C", "val": val, "p": p, "code": code}
                     
+                    elif selected_measure == "Kendall's Tau":
+                        kendall_coefficient, p, _, _, code = perform_kendall_correlation(df, var1_col, var2_col)
+                        state["results"] = {"type": "standard", "label": "Kendall's Tau", "val": kendall_coefficient, "p": p, "code": code} 
+
                     elif selected_measure == "Phi Coefficient (φ)":
                         val, p, code = perform_phi_coefficient_test(df, var1_col, var2_col)
                         state["results"] = {"type": "standard", "label": "Phi (φ)", "val": val, "p": p, "code": code}

@@ -60,36 +60,42 @@ def get_categorical_columns(df):
     """Returns a list of column names that contain categorical data."""
     return df.select_dtypes(include=['object', 'category']).columns.tolist()
 
-def create_categorical_column(df, source_col, new_col_name, bins, labels, right_inclusive=True):
+def create_categorical_column(df, source_col, new_col_name, bins, labels, right_inclusive=True, is_ordinal=True):
     """
     Creates a new categorical column by binning a continuous/numeric column.
     
     Parameters:
-    - df: The pandas DataFrame.
-    - source_col: The name of the numeric column to be binned.
-    - new_col_name: The name of the new categorical column to be created.
-    - bins: A list of numerical edges (e.g., [0, 60, 100] or [-np.inf, 18, 65, np.inf]).
-    - labels: A list of string labels for the bins (length must be len(bins) - 1).
-    - right_inclusive: Boolean, indicates whether the bins include the rightmost edge.
+    * df: The pandas DataFrame.
+    * source_col: The name of the numeric column to be binned.
+    * new_col_name: The name of the new categorical column to be created.
+    * bins: A list of numerical edges (e.g., [0, 60, 100] or [-np.inf, 18, 65, np.inf]).
+    * labels: A list of string labels for the bins (length must be len(bins) - 1).
+    * right_inclusive: Boolean, indicates whether the bins include the rightmost edge.
+    * is_ordinal: Boolean, indicates whether the resulting categories have a logical order.
     
     Returns:
-    - df_updated: The DataFrame with the new column added.
-    - code: String containing the Python code to reproduce the transformation.
+    * df_updated: The DataFrame with the new column added.
+    * code: String containing the Python code to reproduce the transformation.
     """
     # Creamos una copia para evitar modificar el df original inadvertidamente 
     # y evitar el SettingWithCopyWarning de pandas
     df_updated = df.copy()
     
-    # Aplicamos pd.cut para crear las categorías
-    df_updated[new_col_name] = pd.cut(df_updated[source_col], bins=bins, labels=labels, right=right_inclusive)
+    # Aplicamos pd.cut para crear las categorías, haciendo explícito el orden
+    df_updated[new_col_name] = pd.cut(
+        df_updated[source_col], 
+        bins=bins, 
+        labels=labels, 
+        right=right_inclusive,
+        ordered=is_ordinal
+    )
     
-    # Generamos el código reproducible para el usuario
     code = f"# Create a new categorical variable '{new_col_name}' based on '{source_col}'\n"
-    code += f"import numpy as np\n"
-    code += f"import pandas as pd\n\n"
+    code += "import numpy as np\n"
+    code += "import pandas as pd\n\n"
     code += f"bins = {bins}\n"
     code += f"labels = {labels}\n"
-    code += f"df['{new_col_name}'] = pd.cut(df['{source_col}'], bins=bins, labels=labels, right={right_inclusive})\n"
+    code += f"df['{new_col_name}'] = pd.cut(df['{source_col}'], bins=bins, labels=labels, right={right_inclusive}, ordered={is_ordinal})\n"
     
     return df_updated, code
 
