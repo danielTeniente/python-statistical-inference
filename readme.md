@@ -43,3 +43,14 @@ To start the application, run the following command in your terminal:
 ```bash
 streamlit run app.py
 ```
+
+### Command to generate the exe file
+To create an executable file from the Streamlit application, you can use `PyInstaller`. First, ensure you have `PyInstaller` installed:
+```bash
+pip install pyinstaller
+```
+
+Then, run the following command to generate the executable:
+```bash
+pyinstaller --collect-data streamlit --copy-metadata streamlit --hidden-import "streamlit" --hidden-import "streamlit.web.cli" --hidden-import "streamlit.runtime.scriptrunner" --hidden-import "pingouin" --hidden-import "streamlit.runtime.scriptrunner.magic_funcs" --add-data "app.py;." --add-data "gui;gui" --add-data "logic;logic" main.py
+```
