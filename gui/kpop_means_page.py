@@ -111,7 +111,7 @@ def render_kpop_means_page():
             with st.spinner("Computing ANOVA..."):
                 # Call cached filtering function
                 filtered_df = filter_kpop_means_data(df, selected_cat_col, selected_categories)
-                stat, p_value, code = perform_oneway_anova(filtered_df, selected_num_col, selected_cat_col)
+                stat, p_value, code = perform_oneway_anova(filtered_df, selected_num_col, selected_cat_col, equal_var=equal_var)
                 state["anova"] = {"stat": stat, "p": p_value, "code": code}
         
         if "anova" in state:

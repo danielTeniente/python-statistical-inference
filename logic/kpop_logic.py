@@ -42,17 +42,17 @@ def perform_levene(df, num_col, cat_col):
 
     return stat, p_value, code
 
-def perform_oneway_anova(df, num_col, cat_col):
+def perform_oneway_anova(df, num_col, cat_col, equal_var=True):
     """Perform one-way ANOVA."""
     grouped = df[[cat_col, num_col]].dropna().groupby(cat_col, observed=False)[num_col]
     data_arrays = [group.values for name, group in grouped if len(group) > 0]
     
-    stat, p_value = stats.f_oneway(*data_arrays)
+    stat, p_value = stats.f_oneway(*data_arrays, equal_var=equal_var)
     
     code = "from scipy import stats\n\n"
     code += f"grouped = df[['{cat_col}', '{num_col}']].dropna().groupby('{cat_col}', observed=False)['{num_col}']\n"
     code += "data_arrays = [group.values for name, group in grouped if len(group) > 0]\n\n"
-    code += "stat, p_value = stats.f_oneway(*data_arrays)\n\n"
+    code += f"stat, p_value = stats.f_oneway(*data_arrays, equal_var={equal_var})\n\n"
     code += "print(f'ANOVA F-statistic: {stat:.4f}')\n"
     code += "print(f'p-value: {p_value:.4f}')\n"
     
