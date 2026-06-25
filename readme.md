@@ -1,3 +1,5 @@
+<video src="https://github.com/user-attachments/assets/2d52af22-ac80-4aa2-b6f6-150f4838ea70" autoplay loop muted playsinline width="100%"></video>
+
 # Statistical Inference Learning Tool in Python
 
 ## About the Project
